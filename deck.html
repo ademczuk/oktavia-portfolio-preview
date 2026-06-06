@@ -510,6 +510,63 @@
     animation: pulse 2.8s ease-in-out infinite;
   }
 
+  /* ---- See it running: screenshot slides ---- */
+  .shot {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.7rem;
+    margin-top: 1rem;
+  }
+  .shot-frame {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: oklch(0.13 0.018 260 / 0.6);
+    padding: 0.5rem;
+    box-shadow: 0 24px 60px oklch(0.02 0.01 260 / 0.55), inset 0 0 0 1px var(--line-soft);
+    overflow: hidden;
+  }
+  .shot-frame img {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    max-height: 64vh;
+    height: auto;
+    object-fit: contain;
+    border-radius: var(--radius-sm);
+    margin: 0 auto;
+  }
+  .shot-cap {
+    font-size: 0.6em;
+    color: var(--ink-dim);
+    line-height: 1.5;
+    max-width: 70ch;
+    margin: 0;
+  }
+  .shot-cap b { color: var(--ink); font-weight: 500; }
+  .shot-note {
+    font-family: var(--font-mono);
+    font-size: 0.4em;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0;
+  }
+  /* Screenshot slides run tighter at the top so the image gets the room */
+  section[data-slide-name^="See it running"] .slide-pad,
+  section[data-slide-name="See it running"] .slide-pad {
+    justify-content: flex-start;
+    padding-top: 2.4vh;
+  }
+  section[data-slide-name^="See it running"] .eyebrow {
+    margin-bottom: 0.6rem;
+  }
+  section[data-slide-name^="See it running"] h3.shot-head {
+    font-size: 1.42em;
+    margin-bottom: 0.2rem;
+  }
+
   /* ---- Reveal chrome recolour ---- */
   .reveal .progress {
     color: var(--accent);
@@ -561,6 +618,8 @@
     .rung { grid-template-columns: 1fr; gap: 0.3rem; }
     .fitrow { grid-template-columns: 1fr; }
     .slide-pad { padding: 2.4vh 2vw 6vh; }
+    .shot-frame img { max-height: 46vh; }
+    section[data-slide-name^="See it running"] h3.shot-head { font-size: 1.12em; }
   }
   @media (max-width: 760px) {
     /* Avoid double-column agent grid getting cramped */
@@ -817,6 +876,119 @@
             </div>
           </div>
           <div class="slide-foot">A few questions</div>
+        </div>
+      </section>
+
+      <!-- ===== SEE IT RUNNING: intro ===== -->
+      <section data-slide-name="See it running">
+        <div class="slide-pad">
+          <span class="eyebrow">See it running</span>
+          <h2>See it running.</h2>
+          <p class="lead">Six screens from the live app on a seeded demo book, starting at the portfolio and ending at the proof.</p>
+          <span class="preview-pill"><span class="dot"></span> Preview, seeded demo data on AUCTUS CAPITAL</span>
+          <div class="slide-foot">See it running</div>
+        </div>
+      </section>
+
+      <!-- ===== SEE IT RUNNING: 1 dashboard ===== -->
+      <section data-slide-name="See it running, dashboard">
+        <div class="slide-pad">
+          <span class="eyebrow">The whole book at once</span>
+          <h3 class="shot-head">The whole book at once.</h3>
+          <div class="shot">
+            <div class="shot-frame">
+              <img src="screens/01-dashboard.jpg" loading="lazy" width="1500" height="712"
+                   alt="Oktavia Portfolio dashboard: every PortCo, the agents on each, and a live pipeline of agent actions, with portfolio value and value-creation share read from the running app." />
+            </div>
+            <p class="shot-cap">One view of every PortCo, the agents on each, and the live pipeline of actions feeding it, so you triage the whole book at once instead of one company at a time (portfolio value and value-creation share are seeded demo figures).</p>
+            <p class="shot-note">Preview, seeded demo data</p>
+          </div>
+          <div class="slide-foot">See it running, 1 of 6</div>
+        </div>
+      </section>
+
+      <!-- ===== SEE IT RUNNING: 2 intervention / handoff ===== -->
+      <section data-slide-name="See it running, intervention">
+        <div class="slide-pad">
+          <span class="eyebrow">Where EBITDA moves</span>
+          <h3 class="shot-head">Where EBITDA moves.</h3>
+          <div class="shot">
+            <div class="shot-frame">
+              <img src="screens/04-handoff.jpg" loading="lazy" width="1500" height="712"
+                   alt="An intervention in Oktavia Portfolio: a source-tagged forecast becomes a business case, then routes as an approval to the agent or contractor that acts on it." />
+            </div>
+            <p class="shot-cap">A source-tagged forecast becomes a business case, then routes as an approval to the agent or contractor that acts on it, so the saving is traceable rather than asserted.</p>
+            <p class="shot-note">Preview, seeded demo data</p>
+          </div>
+          <div class="slide-foot">See it running, 2 of 6</div>
+        </div>
+      </section>
+
+      <!-- ===== SEE IT RUNNING: 3 workforce ===== -->
+      <section data-slide-name="See it running, workforce">
+        <div class="slide-pad">
+          <span class="eyebrow">The team you hired</span>
+          <h3 class="shot-head">The team you hired.</h3>
+          <div class="shot">
+            <div class="shot-frame">
+              <img src="screens/02-workforce.jpg" loading="lazy" width="1500" height="712"
+                   alt="The Oktavia Portfolio workforce: named colleagues, each with a role, a one-line remit, and an autonomy envelope the owner can revise." />
+            </div>
+            <p class="shot-cap">Named colleagues, each with a role, a one-line remit, and an autonomy envelope you can revise, so you decide how much rope each one gets before it touches a PortCo.</p>
+            <p class="shot-note">Preview, seeded demo data</p>
+          </div>
+          <div class="slide-foot">See it running, 3 of 6</div>
+        </div>
+      </section>
+
+      <!-- ===== SEE IT RUNNING: 4 agent detail ===== -->
+      <section data-slide-name="See it running, agent detail">
+        <div class="slide-pad">
+          <span class="eyebrow">How much rope, and the record</span>
+          <h3 class="shot-head">How much rope, and the record.</h3>
+          <div class="shot">
+            <div class="shot-frame">
+              <img src="screens/03-agent-detail.jpg" loading="lazy" width="1500" height="712"
+                   alt="Ondine's agent detail page: reasoning through Q3 sequencing on an EBITDA-curve argument, with the autonomy envelope set per action and a track record of actions this quarter and partner approval rate." />
+            </div>
+            <p class="shot-cap">Ondine reasons through Q3 sequencing, with the rope set per action (act and cc, act, ask). Her record shows actions this quarter and partner approval rate (seeded figures).</p>
+            <p class="shot-note">Preview, seeded demo data</p>
+          </div>
+          <div class="slide-foot">See it running, 4 of 6</div>
+        </div>
+      </section>
+
+      <!-- ===== SEE IT RUNNING: 5 knowledge graph ===== -->
+      <section data-slide-name="See it running, knowledge graph">
+        <div class="slide-pad">
+          <span class="eyebrow">Memory that stays</span>
+          <h3 class="shot-head">Memory that stays.</h3>
+          <div class="shot">
+            <div class="shot-frame">
+              <img src="screens/06-graph.jpg" loading="lazy" width="1500" height="712"
+                   alt="The Oktavia Portfolio knowledge graph: PortCos, agents, playbooks, and interventions as one navigable graph of the firm's institutional memory." />
+            </div>
+            <p class="shot-cap">PortCos, agents, playbooks, and interventions as one navigable graph, so the firm's institutional memory survives when an operating partner rotates out.</p>
+            <p class="shot-note">Preview, seeded demo data</p>
+          </div>
+          <div class="slide-foot">See it running, 5 of 6</div>
+        </div>
+      </section>
+
+      <!-- ===== SEE IT RUNNING: 6 audit trail ===== -->
+      <section data-slide-name="See it running, audit trail">
+        <div class="slide-pad">
+          <span class="eyebrow">Proof for diligence</span>
+          <h3 class="shot-head">Proof for diligence.</h3>
+          <div class="shot">
+            <div class="shot-frame">
+              <img src="screens/05-audit.jpg" loading="lazy" width="1500" height="712"
+                   alt="The Oktavia Portfolio audit trail: an append-only timeline of every agent and human action, each with a target and a timestamp." />
+            </div>
+            <p class="shot-cap">An append-only timeline of every agent and human action, each with a target and a timestamp, so the trail is ready for diligence instead of reconstructed for it.</p>
+            <p class="shot-note">Preview, seeded demo data</p>
+          </div>
+          <div class="slide-foot">See it running, 6 of 6</div>
         </div>
       </section>
 

@@ -37,6 +37,15 @@
     var CALM_MUL = 0.5;
     function motionMul() { return calm ? CALM_MUL : 1; }
 
+    // Mobile tuning: the full engine (300+ nodes, three canvases, per-frame
+    // bezier links and photons) can peg a phone's main thread and starve touch
+    // input, so a tap on a button can be dropped. On a coarse pointer / narrow
+    // screen we run a much lighter field: fewer nodes, ~30fps, and no photons.
+    var IS_MOBILE =
+      (typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches) ||
+      Math.min(window.innerWidth, window.innerHeight) < 820;
+    var FRAME_MS = IS_MOBILE ? 33 : 18;
+
     // ---- colour helpers ------------------------------------------------
     function hexToRgb(hex) {
       var v = hex.replace("#", "");
@@ -79,7 +88,9 @@
 
     function buildGraph(w, h) {
       var area = w * h;
-      var count = clamp(Math.round(area / 5400), 300, 520);
+      var count = IS_MOBILE
+        ? clamp(Math.round(area / 14000), 90, 150)
+        : clamp(Math.round(area / 5400), 300, 520);
       var ballAspect = w / Math.max(1, h);
       var BALL_R = 1.05;
       var BALL_RY = 0.92;
@@ -368,7 +379,7 @@
     var raf = 0, last = -1;
     function drawFrame(now) {
       if (!midCtx || !nearCtx) return;
-      if (last >= 0 && now - last < 18) { raf = requestAnimationFrame(drawFrame); return; }
+      if (last >= 0 && now - last < FRAME_MS) { raf = requestAnimationFrame(drawFrame); return; }
       last = now;
 
       var sp = focusProgress();
@@ -450,7 +461,7 @@
         ctx.lineWidth = (1.05 + focus * 1.1) * (link.hubLink ? 1.45 : 1);
         ctx.stroke();
 
-        if (drawBandIndex !== 0 && lenFade > 0.6 && (link.hubLink || prox > 0.55)) {
+        if (!IS_MOBILE && drawBandIndex !== 0 && lenFade > 0.6 && (link.hubLink || prox > 0.55)) {
           var focusGate = ease(clamp((focus - 0.32) / 0.2, 0, 1));
           var proxGate = ease(clamp((prox - 0.3) / 0.18, 0, 1));
           var gate = focusGate * proxGate;
