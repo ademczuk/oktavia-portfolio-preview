@@ -567,6 +567,39 @@
     margin-bottom: 0.2rem;
   }
 
+  /* ---- Workforce roster: native pixel-avatar cards (matches the landing) ---- */
+  .wf {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-top: 22px;
+  }
+  .wf-card {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: linear-gradient(160deg, oklch(0.18 0.02 260 / 0.78), oklch(0.14 0.018 260 / 0.85));
+    padding: 14px;
+  }
+  .wf-av {
+    width: 58px; height: 58px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: #02050d;
+    object-fit: cover;
+    image-rendering: pixelated;
+    display: block;
+    margin-bottom: 11px;
+  }
+  .wf-name { font-family: var(--font-display); font-size: 22px; line-height: 1; color: var(--ink); }
+  .wf-role { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); margin-top: 6px; }
+  .wf-env { margin-top: 11px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; color: var(--ink-dim); }
+  .wf-env b { color: var(--accent); font-weight: 400; text-transform: uppercase; }
+  @media (max-width: 760px) {
+    .wf { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .wf-av { width: 46px; height: 46px; }
+    .wf-name { font-size: 18px; }
+  }
+
   /* ---- Reveal chrome recolour ---- */
   .reveal .progress {
     color: var(--accent);
@@ -929,14 +962,17 @@
         <div class="slide-pad">
           <span class="eyebrow">The team you hired</span>
           <h3 class="shot-head">The team you hired.</h3>
-          <div class="shot">
-            <div class="shot-frame">
-              <img src="screens/02-workforce.jpg" loading="eager" decoding="async" width="1500" height="712"
-                   alt="The Oktavia Portfolio workforce: named colleagues, each with a role, a one-line remit, and an autonomy envelope the owner can revise." />
-            </div>
-            <p class="shot-cap">Named colleagues, each with a role, a one-line remit, and an autonomy envelope you can revise, so you decide how much rope each one gets before it touches a PortCo.</p>
-            <p class="shot-note">Preview, seeded demo data</p>
+          <div class="wf">
+            <article class="wf-card"><img class="wf-av" src="avatars/briar.png" alt="Briar, Portfolio Sales Lead" width="58" height="58" /><div class="wf-name">Briar</div><div class="wf-role">Portfolio Sales Lead</div><div class="wf-env">envelope <b>act and cc</b></div></article>
+            <article class="wf-card"><img class="wf-av" src="avatars/ondine.png" alt="Ondine, AI Transformation Architect" width="58" height="58" /><div class="wf-name">Ondine</div><div class="wf-role">AI Transformation Architect</div><div class="wf-env">envelope <b>act</b></div></article>
+            <article class="wf-card"><img class="wf-av" src="avatars/wren.png" alt="Wren, Pricing Analyst" width="58" height="58" /><div class="wf-name">Wren</div><div class="wf-role">Pricing Analyst</div><div class="wf-env">envelope <b>act and cc</b></div></article>
+            <article class="wf-card"><img class="wf-av" src="avatars/cyan.png" alt="Cyan, Procurement Aggregator" width="58" height="58" /><div class="wf-name">Cyan</div><div class="wf-role">Procurement Aggregator</div><div class="wf-env">envelope <b>act and cc</b></div></article>
+            <article class="wf-card"><img class="wf-av" src="avatars/marigold.png" alt="Marigold, Org Design Operator" width="58" height="58" /><div class="wf-name">Marigold</div><div class="wf-role">Org Design Operator</div><div class="wf-env">envelope <b>act and cc</b></div></article>
+            <article class="wf-card"><img class="wf-av" src="avatars/indigo.png" alt="Indigo, Integration PMO" width="58" height="58" /><div class="wf-name">Indigo</div><div class="wf-role">Integration PMO</div><div class="wf-env">envelope <b>act and cc</b></div></article>
+            <article class="wf-card"><img class="wf-av" src="avatars/sage.png" alt="Sage, Benchmarking Steward" width="58" height="58" /><div class="wf-name">Sage</div><div class="wf-role">Benchmarking Steward</div><div class="wf-env">envelope <b>act</b></div></article>
+            <article class="wf-card"><img class="wf-av" src="avatars/rowan.png" alt="Rowan, Board Pack Extractor" width="58" height="58" /><div class="wf-name">Rowan</div><div class="wf-role">Board Pack Extractor</div><div class="wf-env">envelope <b>act</b></div></article>
           </div>
+          <p class="shot-cap">Named colleagues, each with a role, a one-line remit, and an autonomy envelope you can revise, so you decide how much rope each one gets before it touches a PortCo.</p>
           <div class="slide-foot">See it running, 3 of 6</div>
         </div>
       </section>
