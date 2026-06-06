@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Oktavia Portfolio - Value creation, made continuous</title>
+<meta name="description" content="An AI operating partner for private equity. A workforce of named AI employees runs sales, pricing, procurement, and integration across every PortCo, in parallel, around the clock." />
+
+<!-- Fonts: Instrument Serif display + IBM Plex Sans body + IBM Plex Mono labels -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="style.css" />
+
+<style>
+  /* ---- Page-local: nav ---- */
+  .nav {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.05rem var(--gutter);
+    transition: background 0.4s ease, border-color 0.4s ease, backdrop-filter 0.4s ease;
+    border-bottom: 1px solid transparent;
+  }
+  .nav.is-stuck {
+    background: oklch(0.10 0.018 260 / 0.72);
+    backdrop-filter: blur(14px);
+    border-bottom-color: var(--line-soft);
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    letter-spacing: 0.01em;
+  }
+  .brand .mark {
+    width: 26px; height: 26px;
+    display: grid; place-items: center;
+    border: 1px solid var(--accent-line);
+    border-radius: 7px;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    box-shadow: inset 0 0 16px var(--accent-soft);
+  }
+  .brand small {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-left: 0.1rem;
+  }
+  .nav-cta { display: none; }
+  @media (min-width: 720px) { .nav-cta { display: inline-flex; } }
+
+  /* ---- Hero ---- */
+  .hero {
+    position: relative;
+    min-height: 100svh;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+  }
+  .hero-net {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: #02050d;
+    overflow: hidden;
+  }
+  .hero-net canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  #hn-far  { filter: blur(7px);   opacity: 0.5;  transform: translateZ(0) scale(1.03); }
+  #hn-mid  { filter: blur(2.5px); opacity: 0.78; transform: translateZ(0) scale(1.012); }
+  #hn-near { opacity: 1; }
+  .hero-veil {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+      radial-gradient(120% 90% at 78% 14%, transparent 0%, oklch(0.12 0.02 260 / 0.2) 42%, var(--bg) 88%),
+      linear-gradient(180deg, transparent 55%, var(--bg) 100%);
+  }
+  .hero-inner {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    padding-block: 8rem 4rem;
+  }
+  .hero h1 {
+    font-family: var(--font-display);
+    font-size: var(--t-hero);
+    letter-spacing: -0.018em;
+    margin: 1.4rem 0 0;
+    max-width: 16ch;
+  }
+  .hero h1 .glint { color: var(--accent); font-style: italic; }
+  .hero-sub {
+    margin: 1.6rem 0 0;
+    max-width: 50ch;
+    font-size: var(--t-lead);
+    color: var(--ink-dim);
+    line-height: 1.5;
+  }
+  .hero-actions {
+    margin-top: 2.2rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.9rem;
+  }
+  .scroll-hint {
+    position: absolute;
+    bottom: 1.6rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .scroll-hint .bar {
+    width: 1px; height: 34px;
+    background: linear-gradient(var(--accent), transparent);
+    animation: drop 2.4s ease-in-out infinite;
+  }
+  @keyframes drop {
+    0% { transform: scaleY(0.2); transform-origin: top; opacity: 0.3; }
+    50% { transform: scaleY(1); opacity: 1; }
+    100% { transform: scaleY(0.2); transform-origin: bottom; opacity: 0.3; }
+  }
+
+  /* ---- The bet ---- */
+  .bet-grid {
+    display: grid;
+    gap: 1.1rem;
+    grid-template-columns: 1fr;
+    margin-top: 2.6rem;
+  }
+  @media (min-width: 760px) { .bet-grid { grid-template-columns: repeat(3, 1fr); } }
+  .bet-card .num {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.16em;
+    color: var(--accent);
+  }
+  .bet-card h3 {
+    font-family: var(--font-display);
+    font-size: var(--t-h3);
+    margin: 0.7rem 0 0.5rem;
+  }
+  .bet-card p { color: var(--ink-dim); margin: 0; font-size: 0.98rem; line-height: 1.55; }
+
+  /* ---- Workforce ---- */
+  .agents-grid {
+    display: grid;
+    gap: 1.1rem;
+    grid-template-columns: 1fr;
+    margin-top: 2.8rem;
+  }
+  @media (min-width: 600px) { .agents-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 980px) { .agents-grid { grid-template-columns: repeat(4, 1fr); } }
+  .agent { display: flex; flex-direction: column; }
+  .agent-portrait {
+    position: relative;
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  .agent-img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--line);
+    background: #02050d;
+    display: block;
+    image-rendering: pixelated;
+  }
+  .agent-result {
+    position: absolute;
+    left: 0.6rem;
+    bottom: 0.6rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.42rem;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+    padding: 0.34rem 0.62rem;
+    border-radius: var(--radius-pill);
+    background: oklch(0.14 0.02 260 / 0.82);
+    border: 1px solid var(--accent-line);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  }
+  .agent-result .rdot {
+    width: 6px; height: 6px; border-radius: 50%;
+    flex: none;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: rpulse 2.4s ease-in-out infinite;
+  }
+  @keyframes rpulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+  .agent-name {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+  .agent-role {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-top: 0.4rem;
+  }
+  .agent-desc {
+    color: var(--ink-dim);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    margin: 0 0 1rem;
+  }
+  .envelope {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
+    color: var(--ink-dim);
+    padding: 0.32rem 0.62rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-pill);
+    background: oklch(0.13 0.018 260 / 0.6);
+  }
+  .envelope .lvl {
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+  .envelope.is-blocked .lvl { color: var(--ink-faint); }
+
+  /* ---- Rebuild lever band (Q1-Q4) ---- */
+  .lever {
+    background:
+      radial-gradient(80% 120% at 90% -10%, var(--accent-soft), transparent 60%),
+      linear-gradient(180deg, var(--bg-deep), var(--bg));
+    border-top: 1px solid var(--line-soft);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .lever-quote {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: clamp(1.3rem, 1rem + 1.4vw, 2rem);
+    color: var(--ink);
+    max-width: 24ch;
+    margin: 1.4rem 0 0;
+  }
+  .steps {
+    counter-reset: q;
+    display: grid;
+    gap: 0;
+    grid-template-columns: 1fr;
+    margin-top: 2.6rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  @media (min-width: 880px) { .steps { grid-template-columns: repeat(4, 1fr); } }
+  .step {
+    padding: 1.5rem 1.4rem 1.7rem;
+    border-bottom: 1px solid var(--line);
+    position: relative;
+    background: oklch(0.15 0.018 260 / 0.5);
+    transition: background 0.3s ease;
+  }
+  @media (min-width: 880px) {
+    .step { border-bottom: 0; border-right: 1px solid var(--line); }
+    .step:last-child { border-right: 0; }
+  }
+  .step:last-child { border-bottom: 0; }
+  .step:hover { background: oklch(0.18 0.02 260 / 0.7); }
+  .step .q {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+  }
+  .step h3 {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    margin: 0.7rem 0 0.55rem;
+  }
+  .step p { color: var(--ink-dim); font-size: 0.9rem; line-height: 1.52; margin: 0; }
+
+  /* ---- Where it fits ---- */
+  .fits {
+    display: grid;
+    gap: 0.7rem;
+    margin-top: 2.6rem;
+  }
+  .fit-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.3rem 1.5rem;
+    align-items: baseline;
+    padding: 1.05rem 1.2rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: oklch(0.15 0.018 260 / 0.4);
+    transition: border-color 0.3s ease, transform 0.3s ease;
+  }
+  @media (min-width: 720px) { .fit-row { grid-template-columns: 230px 1fr; } }
+  .fit-row:hover { border-color: var(--accent-line); transform: translateX(4px); }
+  .fit-who {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    letter-spacing: 0.04em;
+    color: var(--ink);
+  }
+  .fit-who span { color: var(--ink-faint); }
+  .fit-wedge { color: var(--ink-dim); font-size: 0.95rem; line-height: 1.5; }
+  .fit-wedge b { color: var(--accent); font-weight: 500; }
+
+  /* ---- Footer ---- */
+  .foot {
+    border-top: 1px solid var(--line-soft);
+    background: var(--bg-deep);
+  }
+  .foot-grid {
+    display: grid;
+    gap: 1.8rem;
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+  @media (min-width: 760px) { .foot-grid { grid-template-columns: 1.4fr 1fr; } }
+  .preview-note {
+    border: 1px solid var(--accent-line);
+    background: var(--accent-soft);
+    border-radius: var(--radius);
+    padding: 1.2rem 1.3rem;
+  }
+  .preview-note .tag {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .preview-note p { margin: 0.6rem 0 0; color: var(--ink-dim); font-size: 0.9rem; line-height: 1.55; }
+  .foot-meta { font-size: 0.85rem; color: var(--ink-faint); }
+  .foot-meta a { color: var(--ink-dim); border-bottom: 1px solid var(--line); }
+  .foot-meta a:hover { color: var(--accent); border-color: var(--accent-line); }
+  .foot-bottom {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.8rem;
+    margin-top: 2.4rem;
+    padding-top: 1.4rem;
+    border-top: 1px solid var(--line-soft);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    color: var(--ink-faint);
+  }
+</style>
+</head>
+
+<body class="grain">
+
+  <!-- ============ NAV ============ -->
+  <nav class="nav" id="nav">
+    <a class="brand" href="#top">
+      <span class="mark">O</span>
+      Oktavia
+      <small>Portfolio</small>
+    </a>
+    <a class="btn btn--ghost nav-cta" href="deck.html">
+      See the capabilities <span class="arrow">&rarr;</span>
+    </a>
+  </nav>
+
+  <!-- ============ HERO ============ -->
+  <header class="hero" id="top">
+    <div id="hero-net" class="hero-net" aria-hidden="true">
+      <canvas id="hn-far"></canvas>
+      <canvas id="hn-mid"></canvas>
+      <canvas id="hn-near"></canvas>
+    </div>
+    <div class="hero-veil"></div>
+    <div class="hero-inner wrap">
+      <span class="eyebrow reveal">AI operating partner</span>
+      <h1 class="reveal" style="--i:1">
+        Value creation,<br /><span class="glint">made continuous.</span>
+      </h1>
+      <p class="hero-sub reveal" style="--i:2">
+        A workforce of named AI employees runs sales, pricing, procurement, and
+        integration across every PortCo, in parallel, around the clock. The
+        operating system that compounds.
+      </p>
+      <div class="hero-actions reveal" style="--i:3">
+        <a class="btn btn--primary" href="deck.html">
+          See the capabilities <span class="arrow">&rarr;</span>
+        </a>
+        <span class="chip"><span class="dot"></span> Early preview</span>
+      </div>
+    </div>
+    <div class="scroll-hint" aria-hidden="true">
+      <span>Scroll</span>
+      <span class="bar"></span>
+    </div>
+  </header>
+
+  <!-- ============ THE BET ============ -->
+  <section class="section" id="bet">
+    <div class="wrap">
+      <span class="eyebrow reveal">The bet</span>
+      <h2 class="section-title reveal" style="--i:1">
+        Institutional memory belongs in the platform, not in a partner's head.
+      </h2>
+      <div class="bet-grid reveal" data-stagger>
+        <article class="bet-card card" style="--i:0">
+          <div class="num">01</div>
+          <h3>Memory that stays</h3>
+          <p>
+            What a partner learns at one PortCo persists as platform memory.
+            People rotate. The track record does not leave with them.
+          </p>
+        </article>
+        <article class="bet-card card" style="--i:1">
+          <div class="num">02</div>
+          <h3>Agent-first, not prompt-first</h3>
+          <p>
+            The partner sets autonomy envelopes and approves. The agents read,
+            propose, and act inside those bounds. Nobody is typing prompts all day.
+          </p>
+        </article>
+        <article class="bet-card card" style="--i:2">
+          <div class="num">03</div>
+          <h3>Playbooks that transfer</h3>
+          <p>
+            A playbook that worked at one PortCo is matched to the next company
+            with the same bottleneck. The pattern moves; the value compounds.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <hr class="rule" />
+
+  <!-- ============ THE WORKFORCE ============ -->
+  <section class="section" id="workforce">
+    <div class="wrap">
+      <span class="eyebrow reveal">The workforce</span>
+      <h2 class="section-title reveal" style="--i:1">Eight named employees, one firm identity each.</h2>
+      <p class="lead reveal" style="--i:2">
+        Every agent has a global firm identity and a per-PortCo authorization
+        profile. The Briar authorized at PortCo A is the same Briar at PortCo B,
+        with the same track record and an autonomy envelope set per action.
+      </p>
+
+      <div class="agents-grid reveal" data-stagger id="agents"></div>
+    </div>
+  </section>
+
+  <!-- ============ REBUILD LEVER (Q1-Q4) ============ -->
+  <section class="section lever" id="lever">
+    <div class="wrap">
+      <span class="eyebrow reveal">The strategic anchor</span>
+      <h2 class="section-title reveal" style="--i:1">The AI-native rebuild lever.</h2>
+      <p class="lever-quote reveal" style="--i:2">
+        "The lever no traditional ops partner can pull."
+      </p>
+      <p class="lead reveal" style="--i:3; margin-top:1.2rem">
+        For each PortCo, Ondine models the AI-native target state and the
+        workforce executes the migration. Four quarters, each milestone owned by
+        an agent, a human, or a contractor.
+      </p>
+
+      <div class="steps reveal" data-stagger>
+        <div class="step" style="--i:0">
+          <div class="q">Q1</div>
+          <h3>Current-state assessment</h3>
+          <p>
+            Reads board packs, ERP exports, org charts, and interview
+            transcripts, with lineage back to every source.
+          </p>
+        </div>
+        <div class="step" style="--i:1">
+          <div class="q">Q2</div>
+          <h3>Target-state model</h3>
+          <p>
+            Which functions stay human, which become agent-driven, which
+            workflows compress from days to minutes.
+          </p>
+        </div>
+        <div class="step" style="--i:2">
+          <div class="q">Q3</div>
+          <h3>Sequenced migration plan</h3>
+          <p>
+            Quarter-by-quarter milestones, each owned by an agent, human, or
+            contractor, cross-checked for compatibility.
+          </p>
+        </div>
+        <div class="step" style="--i:3">
+          <div class="q">Q4</div>
+          <h3>Execution and measurement</h3>
+          <p>
+            EBITDA movement is source-linked and claim-tiered as observed,
+            estimated, or controlled. Built for diligence.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ WHERE IT FITS ============ -->
+  <section class="section" id="fits">
+    <div class="wrap">
+      <span class="eyebrow reveal">Where it fits</span>
+      <h2 class="section-title reveal" style="--i:1">The wedge against the field.</h2>
+      <div class="fits reveal" data-stagger id="fitsList"></div>
+    </div>
+  </section>
+
+  <hr class="rule" />
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="foot section--tight">
+    <div class="wrap">
+      <div class="foot-grid">
+        <div class="preview-note reveal">
+          <span class="tag">Early preview</span>
+          <p>
+            This is an early preview, not the live application. It runs on a real
+            local stack with real model responses; some surfaces are seeded with
+            realistic demo data. Figures shown in the product are source-linked
+            and claim-tiered. Nothing here should be read as a guaranteed result.
+          </p>
+        </div>
+        <div class="foot-meta reveal" style="--i:1">
+          <p style="margin-top:0">
+            <strong style="color:var(--ink)">Oktavia Portfolio</strong><br />
+            An AI operating partner for private equity value creation.
+          </p>
+          <p>
+            Built by Andrew Demczuk / Texterous for the Oktavia trial.
+          </p>
+          <p>
+            <a href="deck.html">Open the capabilities deck &rarr;</a>
+          </p>
+        </div>
+      </div>
+      <div class="foot-bottom">
+        <span>Oktavia Portfolio &middot; preview</span>
+        <span>Texterous &middot; 2026</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============ DATA + BEHAVIOUR ============ -->
+  <script>
+    /* ---- Agent data (faithful to the brief) ---- */
+    const AGENTS = [
+      { name: "Briar", role: "Portfolio Sales Lead", hue: 26,
+        desc: "Drives sales-side initiatives across every PortCo. Reads the CRM, pipeline, and win/loss notes; proposes account-strategy and pricing shifts; CCs the CRO and operating partner.",
+        env: "act and cc", result: "3 account plays proposed" },
+      { name: "Ondine", role: "AI Transformation Architect", hue: 80,
+        desc: "Models what each PortCo looks like rebuilt AI-native from scratch and produces sequenced migration plans. Hands execution to the rest of the workforce.",
+        env: "act", result: "2 rebuild plans sequenced" },
+      { name: "Wren", role: "Pricing Analyst", hue: 320,
+        desc: "Continuous pricing intelligence: under-priced products, mis-segmented tiers, competitor moves. Designs tests with quantified business cases.",
+        env: "act and cc", result: "mis-priced tier flagged" },
+      { name: "Cyan", role: "Procurement Aggregator", hue: 190,
+        desc: "Cross-portfolio procurement: finds shared vendors, negotiates aggregated rates, brokers renegotiation when contract windows align.",
+        env: "act and cc", result: "shared-vendor overlap found" },
+      { name: "Marigold", role: "Org Design Operator", hue: 58,
+        desc: "Reads org charts, hiring plans, and departures; surfaces structural gaps; can dispatch a recruiting contractor via send-a-human.",
+        env: "act and cc", result: "org gap surfaced" },
+      { name: "Indigo", role: "Integration PMO", hue: 262,
+        desc: "Post-M&A 100-day integration program manager. Coordinates with the M&A platform when both are deployed.",
+        env: "act and cc", result: "100-day plan tracked" },
+      { name: "Sage", role: "Benchmarking Steward", hue: 150,
+        desc: "Maintains portfolio-wide benchmarks; compares every KPI to portfolio percentiles and sector benchmarks.",
+        env: "act", result: "KPIs benchmarked" },
+      { name: "Rowan", role: "Board Pack Extractor", hue: 14,
+        desc: "Reads each board pack the moment it lands, pulls period KPIs, variance-to-plan, and management asks; hands a structured extraction to Sage and Ondine.",
+        env: "act", result: "board pack extracted" },
+    ];
+
+    const FITS = [
+      { who: "Vista", sub: "Agentic AI Factory, enablement",
+        wedge: "Oktavia owns the intervention workflows, the follow-through, and the attribution, not just the enablement layer." },
+      { who: "Glean", sub: "enterprise search",
+        wedge: "Named AI employees with real PortCo authority, not intranet search over your documents." },
+      { who: "Squirro", sub: "agent framework",
+        wedge: "Specialized for PE operating work out of the box, not a framework you assemble yourself." },
+      { who: "Multimodal", sub: "financial-services workflows",
+        wedge: "PortCo execution measured over weeks, with the agents that carry it out." },
+      { who: "Consulting", sub: "EY / KPMG / PwC",
+        wedge: "Services dispatch is a first-class action, while the software keeps the memory and the cadence." },
+    ];
+
+    /* ---- Render agents ---- */
+    (function () {
+      const grid = document.getElementById("agents");
+      AGENTS.forEach((a, i) => {
+        const blocked = a.env === "blocked";
+        const el = document.createElement("article");
+        el.className = "agent card";
+        el.style.setProperty("--i", i);
+        const img = "avatars/" + a.name.toLowerCase() + ".png";
+        el.innerHTML =
+          '<div class="agent-portrait">' +
+            '<img class="agent-img" src="' + img + '" alt="' + a.name + ', ' + a.role + '" loading="lazy" width="96" height="96" />' +
+            '<span class="agent-result"><span class="rdot"></span>' + a.result + '</span>' +
+          '</div>' +
+          '<div class="agent-name">' + a.name + '</div>' +
+          '<div class="agent-role">' + a.role + '</div>' +
+          '<p class="agent-desc">' + a.desc + '</p>' +
+          '<span class="envelope ' + (blocked ? 'is-blocked' : '') + '">envelope <span class="lvl">' + a.env + '</span></span>';
+        grid.appendChild(el);
+      });
+    })();
+
+    /* ---- Render fits ---- */
+    (function () {
+      const list = document.getElementById("fitsList");
+      FITS.forEach((f, i) => {
+        const row = document.createElement("div");
+        row.className = "fit-row";
+        row.style.setProperty("--i", i);
+        row.innerHTML =
+          '<div class="fit-who">' + f.who + ' <span>/ ' + f.sub + '</span></div>' +
+          '<div class="fit-wedge">' + f.wedge + '</div>';
+        list.appendChild(row);
+      });
+    })();
+
+    /* ---- Reveal on scroll ---- */
+    (function () {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) { e.target.classList.add("is-in"); io.unobserve(e.target); }
+        });
+      }, { threshold: 0.16, rootMargin: "0px 0px -8% 0px" });
+      document.querySelectorAll(".reveal").forEach((n) => io.observe(n));
+    })();
+
+    /* ---- Sticky nav ---- */
+    (function () {
+      const nav = document.getElementById("nav");
+      const onScroll = () => nav.classList.toggle("is-stuck", window.scrollY > 40);
+      onScroll();
+      window.addEventListener("scroll", onScroll, { passive: true });
+    })();
+  </script>
+
+  <!-- ============ HERO NETWORK (vanilla canvas, ported 1:1 from the live app) ============ -->
+  <script src="hero-network.js"></script>
+</body>
+</html>

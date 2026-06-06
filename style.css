@@ -1,0 +1,261 @@
+/* =============================================================
+   Oktavia Portfolio - preview site design system
+   Shared by index.html and deck.html
+   Aesthetic mirrors the real app:
+   near-black blue-tinted canvas, warm amber accent,
+   teal health signal, Instrument Serif display +
+   IBM Plex Sans body + IBM Plex Mono labels.
+   ============================================================= */
+
+/* ---- Tokens ---- */
+:root {
+  /* Palette (mirrors the real app oklch values) */
+  --bg:            oklch(0.12 0.02 260);
+  --bg-deep:       oklch(0.09 0.018 260);
+  --surface:       oklch(0.16 0.02 260);
+  --surface-2:     oklch(0.19 0.02 260);
+  --line:          oklch(0.27 0.018 260);
+  --line-soft:     oklch(0.27 0.018 260 / 0.5);
+
+  --ink:           oklch(0.97 0.005 250);
+  --ink-dim:       oklch(0.74 0.012 260);
+  --ink-faint:     oklch(0.58 0.012 260);
+
+  /* Single restrained accent: warm amber/gold */
+  --accent:        oklch(0.80 0.155 80);
+  --accent-strong: oklch(0.84 0.165 82);
+  --accent-ink:    oklch(0.20 0.05 80);
+  --accent-soft:   oklch(0.80 0.13 80 / 0.14);
+  --accent-line:   oklch(0.80 0.13 80 / 0.32);
+  --glow:          oklch(0.80 0.16 80 / 0.42);
+
+  /* Health signal, used sparingly */
+  --teal:          oklch(0.82 0.12 175);
+  --rose:          oklch(0.66 0.2 18);
+
+  /* Type */
+  --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
+  --font-body:    "IBM Plex Sans", ui-sans-serif, sans-serif;
+  --font-mono:    "IBM Plex Mono", ui-monospace, monospace;
+
+  /* Type scale (fluid) */
+  --t-eyebrow: 0.78rem;
+  --t-body:    1.0625rem;
+  --t-lead:    clamp(1.15rem, 1rem + 0.7vw, 1.5rem);
+  --t-h3:      clamp(1.25rem, 1.05rem + 0.9vw, 1.65rem);
+  --t-h2:      clamp(1.9rem, 1.4rem + 2.2vw, 3.1rem);
+  --t-hero:    clamp(2.7rem, 1.6rem + 5.4vw, 6.2rem);
+
+  /* Space + shape */
+  --radius:    14px;
+  --radius-sm: 9px;
+  --radius-pill: 999px;
+  --maxw:      1180px;
+  --gutter:    clamp(1.25rem, 5vw, 3rem);
+
+  --shadow:    0 24px 60px -28px rgba(0, 0, 0, 0.7);
+  --shadow-lift: 0 36px 90px -40px rgba(0, 0, 0, 0.8);
+}
+
+/* ---- Reset / base ---- */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--t-body);
+  line-height: 1.6;
+  letter-spacing: 0.005em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+a { color: inherit; text-decoration: none; }
+
+h1, h2, h3 { margin: 0; font-weight: 400; line-height: 1.06; }
+
+.font-display { font-family: var(--font-display); }
+.font-mono { font-family: var(--font-mono); }
+
+::selection { background: var(--accent-soft); color: var(--ink); }
+
+/* ---- Layout helpers ---- */
+.wrap {
+  width: 100%;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding-inline: var(--gutter);
+}
+
+.section { padding-block: clamp(4rem, 9vw, 7.5rem); position: relative; }
+.section--tight { padding-block: clamp(3rem, 6vw, 5rem); }
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--t-eyebrow);
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.eyebrow::before {
+  content: "";
+  width: 26px;
+  height: 1px;
+  background: var(--accent-line);
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: var(--t-h2);
+  letter-spacing: -0.01em;
+  margin-top: 1rem;
+  max-width: 18ch;
+}
+
+.lead {
+  font-size: var(--t-lead);
+  color: var(--ink-dim);
+  max-width: 56ch;
+  line-height: 1.5;
+}
+
+/* ---- Buttons ---- */
+.btn {
+  --b: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  letter-spacing: 0.06em;
+  padding: 0.85rem 1.4rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.22s ease, box-shadow 0.3s ease, background 0.25s ease, border-color 0.25s ease;
+  will-change: transform;
+}
+.btn--primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 0 0 0 var(--glow);
+}
+.btn--primary:hover {
+  transform: translateY(-2px);
+  background: var(--accent-strong);
+  box-shadow: 0 18px 44px -16px var(--glow);
+}
+.btn--ghost {
+  background: transparent;
+  color: var(--ink-dim);
+  border-color: var(--line);
+}
+.btn--ghost:hover {
+  transform: translateY(-2px);
+  color: var(--ink);
+  border-color: var(--accent-line);
+}
+.btn .arrow { transition: transform 0.22s ease; }
+.btn:hover .arrow { transform: translateX(3px); }
+
+/* ---- Chips ---- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: oklch(0.16 0.02 260 / 0.6);
+}
+.chip .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--glow);
+  animation: pulse 2.8s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.82); }
+}
+
+/* ---- Cards ---- */
+.card {
+  position: relative;
+  background:
+    linear-gradient(160deg, oklch(0.18 0.02 260 / 0.9), oklch(0.14 0.018 260 / 0.92));
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.5rem 1.5rem 1.6rem;
+  transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.35s ease;
+  overflow: hidden;
+}
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(120% 80% at 12% 0%, var(--accent-soft), transparent 55%);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+.card:hover {
+  transform: translateY(-5px);
+  border-color: var(--accent-line);
+  box-shadow: var(--shadow-lift);
+}
+.card:hover::after { opacity: 1; }
+
+/* ---- Reveal animation ---- */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.is-in { opacity: 1; transform: none; }
+[data-stagger] > * {
+  transition-delay: calc(var(--i, 0) * 80ms);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .chip .dot { animation: none; }
+  html { scroll-behavior: auto; }
+}
+
+/* ---- Divider rule ---- */
+.rule {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(90deg, transparent, var(--line), transparent);
+  margin: 0;
+}
+
+/* ---- Grain + vignette overlays (shared) ---- */
+.grain::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 220 220' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
