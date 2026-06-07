@@ -235,6 +235,16 @@
     font-size: 0.62em;
     color: var(--bg-deep);
   }
+  .mini .av-img {
+    width: 40px; height: 40px;
+    flex: none;
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    background: #02050d;
+    object-fit: cover;
+    image-rendering: pixelated;
+    display: block;
+  }
   .mini .mname {
     font-family: var(--font-display);
     font-size: 0.82em;
@@ -1102,13 +1112,11 @@
     function renderAgents(list, mountId) {
       const grid = document.getElementById(mountId);
       list.forEach((a) => {
-        const c1 = "oklch(0.82 0.16 " + a.hue + ")";
-        const c2 = "oklch(0.62 0.18 " + ((a.hue + 40) % 360) + ")";
         const el = document.createElement("div");
         el.className = "mini";
         el.innerHTML =
           '<div class="mhead">' +
-            '<div class="av" style="background:linear-gradient(140deg,' + c1 + ',' + c2 + ')">' + a.name[0] + '</div>' +
+            '<img class="av-img" src="avatars/' + a.name.toLowerCase() + '.png" alt="' + a.name + '" width="40" height="40" loading="eager" decoding="async" />' +
             '<div>' +
               '<div class="mname">' + a.name + '</div>' +
               '<div class="mrole">' + a.role + '</div>' +
