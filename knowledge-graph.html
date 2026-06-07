@@ -1,0 +1,1014 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Oktavia Portfolio - Knowledge graph (redesign prototype)</title>
+<meta name="description" content="A 2D layered map of the institutional memory: AI colleagues, PortCos, bottlenecks, interventions, and playbooks, and how they connect." />
+
+<!-- Fonts: Instrument Serif display + IBM Plex Sans body + IBM Plex Mono labels -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+
+<!-- Shared preview-site design system (amber accent, dark navy canvas, brand fonts) -->
+<link rel="stylesheet" href="style.css" />
+
+<!-- Graph engine: Cytoscape.js + dagre layered layout, pinned versions -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dagre/0.8.5/dagre.min.js" defer></script>
+<script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js" defer></script>
+
+<style>
+  /* ---- Page-local layout ---- */
+  html, body { height: 100%; }
+  body { overflow: hidden; background: #02050d; }
+
+  .kg-app {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    height: 100%;
+  }
+
+  /* ---- Headline strip ---- */
+  .kg-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.85rem 1.25rem;
+    padding: 0.8rem clamp(0.9rem, 3vw, 1.6rem);
+    border-bottom: 1px solid var(--line-soft);
+    background: oklch(0.10 0.018 260 / 0.78);
+    backdrop-filter: blur(14px);
+  }
+  .kg-title {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    font-family: var(--font-display);
+    font-size: clamp(1.15rem, 0.9rem + 1vw, 1.55rem);
+    letter-spacing: 0.01em;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .kg-title small {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  /* ---- Live counts per kind ---- */
+  .kg-counts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+  .kg-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    color: var(--ink-dim);
+    padding: 0.28rem 0.6rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-pill);
+    background: oklch(0.16 0.02 260 / 0.55);
+  }
+  .kg-count .swatch {
+    width: 16px;
+    height: 11px;
+    flex: none;
+    border-radius: 3px;
+  }
+  .kg-count .num {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  /* ---- Search ---- */
+  .kg-search {
+    margin-left: auto;
+    position: relative;
+    flex: 1 1 200px;
+    max-width: 280px;
+    min-width: 160px;
+  }
+  .kg-search input {
+    width: 100%;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--ink);
+    background: oklch(0.14 0.018 260 / 0.85);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-pill);
+    padding: 0.5rem 0.85rem;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .kg-search input::placeholder { color: var(--ink-faint); }
+  .kg-search input:focus {
+    border-color: var(--accent-line);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .kg-suggest {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 30;
+    list-style: none;
+    margin: 0;
+    padding: 0.25rem;
+    background: oklch(0.13 0.018 260 / 0.97);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow);
+    max-height: 280px;
+    overflow-y: auto;
+    display: none;
+  }
+  .kg-suggest.is-open { display: block; }
+  .kg-suggest li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.55rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.82rem;
+    color: var(--ink-dim);
+  }
+  .kg-suggest li:hover, .kg-suggest li.is-active {
+    background: var(--accent-soft);
+    color: var(--ink);
+  }
+  .kg-suggest li .dot {
+    width: 9px; height: 9px; border-radius: 50%; flex: none;
+  }
+  .kg-suggest li .k {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  /* ---- Stage (graph + inspector) ---- */
+  .kg-stage {
+    position: relative;
+    min-height: 0;
+    overflow: hidden;
+  }
+  #cy {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(120% 100% at 18% -10%, oklch(0.16 0.03 260 / 0.5), transparent 60%),
+      #02050d;
+  }
+
+  /* ---- Legend (always-on) ---- */
+  .kg-legend {
+    position: absolute;
+    left: clamp(0.6rem, 2vw, 1.1rem);
+    bottom: clamp(0.6rem, 2vw, 1.1rem);
+    z-index: 12;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.75rem 0.85rem;
+    background: oklch(0.11 0.018 260 / 0.82);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    backdrop-filter: blur(10px);
+    max-width: 220px;
+  }
+  .kg-legend h4 {
+    margin: 0 0 0.15rem;
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 500;
+  }
+  .kg-legend .row {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.76rem;
+    color: var(--ink-dim);
+  }
+  /* Shape glyphs: a small CSS rendition of each node shape */
+  .kg-glyph {
+    width: 18px; height: 14px; flex: none;
+    display: inline-block;
+  }
+  .kg-glyph.ellipse { border-radius: 50%; }
+  .kg-glyph.rrect { border-radius: 5px; }
+  .kg-glyph.rect { border-radius: 2px; }
+  .kg-glyph.diamond { transform: rotate(45deg) scale(0.78); border-radius: 3px; }
+  .kg-glyph.hex {
+    clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  }
+
+  .kg-legend .hint {
+    margin-top: 0.2rem;
+    font-size: 0.66rem;
+    color: var(--ink-faint);
+    line-height: 1.4;
+  }
+
+  /* ---- Inspector (right side, plain DOM) ---- */
+  .kg-inspector {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(380px, 88vw);
+    z-index: 20;
+    transform: translateX(102%);
+    transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+    display: flex;
+    flex-direction: column;
+    background: oklch(0.11 0.018 260 / 0.94);
+    border-left: 1px solid var(--line);
+    backdrop-filter: blur(16px);
+    box-shadow: -28px 0 80px -40px rgba(0,0,0,0.85);
+  }
+  .kg-inspector.is-open { transform: none; }
+
+  .kg-insp-head {
+    padding: 1.1rem 1.2rem 0.9rem;
+    border-bottom: 1px solid var(--line-soft);
+    position: relative;
+  }
+  .kg-insp-kind {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 0.5rem;
+  }
+  .kg-insp-kind .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .kg-insp-name {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    line-height: 1.12;
+    color: var(--ink);
+  }
+  .kg-insp-subtitle {
+    margin-top: 0.3rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--ink-dim);
+    letter-spacing: 0.02em;
+  }
+  .kg-insp-close {
+    position: absolute;
+    top: 0.9rem;
+    right: 0.95rem;
+    width: 30px; height: 30px;
+    display: grid; place-items: center;
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    color: var(--ink-dim);
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+  .kg-insp-close:hover { color: var(--ink); border-color: var(--accent-line); }
+
+  .kg-insp-body {
+    padding: 1.1rem 1.2rem 1.6rem;
+    overflow-y: auto;
+    flex: 1 1 auto;
+  }
+  .kg-insp-body p.copy {
+    margin: 0 0 1.3rem;
+    font-size: 0.92rem;
+    line-height: 1.62;
+    color: var(--ink-dim);
+  }
+  .kg-insp-body .empty {
+    font-size: 0.84rem;
+    color: var(--ink-faint);
+    font-style: italic;
+    margin-bottom: 1.3rem;
+  }
+
+  .kg-conn-group { margin-bottom: 1.2rem; }
+  .kg-conn-group h5 {
+    margin: 0 0 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 500;
+  }
+  .kg-conn {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    width: 100%;
+    text-align: left;
+    background: oklch(0.15 0.02 260 / 0.6);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 0.55rem 0.65rem;
+    margin-bottom: 0.4rem;
+    cursor: pointer;
+    color: var(--ink-dim);
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+  }
+  .kg-conn:hover {
+    border-color: var(--accent-line);
+    background: oklch(0.17 0.02 260 / 0.75);
+    transform: translateX(2px);
+    color: var(--ink);
+  }
+  .kg-conn .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .kg-conn .label {
+    font-size: 0.84rem;
+    flex: 1 1 auto;
+    line-height: 1.25;
+  }
+  .kg-conn .rel {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  /* ---- Footer pill (honest) ---- */
+  .kg-foot {
+    position: absolute;
+    right: clamp(0.6rem, 2vw, 1.1rem);
+    bottom: clamp(0.6rem, 2vw, 1.1rem);
+    z-index: 12;
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.05em;
+    color: var(--ink-faint);
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-pill);
+    background: oklch(0.11 0.018 260 / 0.82);
+    backdrop-filter: blur(8px);
+    transition: opacity 0.3s ease;
+  }
+
+  /* ---- Loading note ---- */
+  .kg-loading {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: grid;
+    place-items: center;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+  }
+  .kg-loading.is-hidden { opacity: 0; }
+
+  /* When inspector is open on a wide screen, nudge the footer pill clear of it */
+  @media (min-width: 760px) {
+    .kg-app.insp-open .kg-foot { right: calc(min(380px, 88vw) + 1.1rem); }
+  }
+  /* On small screens the inspector covers the whole stage, so hide the floating bits behind it */
+  @media (max-width: 640px) {
+    .kg-app.insp-open .kg-legend,
+    .kg-app.insp-open .kg-foot { opacity: 0; pointer-events: none; }
+  }
+</style>
+</head>
+
+<body class="grain">
+
+<div class="kg-app" id="kgApp">
+
+  <!-- Headline strip: title, live counts, search -->
+  <header class="kg-bar">
+    <span class="kg-title">
+      Knowledge graph
+      <small>Oktavia Portfolio</small>
+    </span>
+
+    <div class="kg-counts" id="kgCounts" aria-label="Node counts per kind"></div>
+
+    <div class="kg-search">
+      <input
+        id="kgSearch"
+        type="search"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="Search a node by name" />
+      <ul class="kg-suggest" id="kgSuggest" role="listbox"></ul>
+    </div>
+  </header>
+
+  <!-- Stage -->
+  <div class="kg-stage">
+    <div id="cy"></div>
+
+    <div class="kg-loading" id="kgLoading">Loading the graph</div>
+
+    <!-- Always-on legend: color plus shape per kind -->
+    <div class="kg-legend" id="kgLegend">
+      <h4>Legend</h4>
+      <!-- rows injected by JS -->
+      <p class="hint">Click any node to see its connections. Click the background to reset.</p>
+    </div>
+
+    <!-- Inspector (plain DOM) -->
+    <aside class="kg-inspector" id="kgInspector" aria-hidden="true">
+      <div class="kg-insp-head">
+        <button class="kg-insp-close" id="kgClose" aria-label="Close inspector">&times;</button>
+        <span class="kg-insp-kind" id="kgInspKind"></span>
+        <div class="kg-insp-name" id="kgInspName"></div>
+        <div class="kg-insp-subtitle" id="kgInspSubtitle"></div>
+      </div>
+      <div class="kg-insp-body" id="kgInspBody"></div>
+    </aside>
+
+    <!-- Honest footer pill -->
+    <div class="kg-foot">Prototype of the redesigned knowledge graph. Demo data.</div>
+  </div>
+</div>
+
+<script>
+/* =============================================================
+   Oktavia Portfolio - knowledge graph redesign prototype
+   2D layered map with Cytoscape.js + dagre.
+   Self-contained: data is inlined, no fetch.
+   ============================================================= */
+
+/* ---- Demo data (inlined) ---- */
+const DATA = {"nodes":[{"id":"agent:briar","kind":"agent","label":"Briar","subtitle":"Portfolio Sales Lead","body":"Authorized at every PortCo to read the CRM, pipeline, win/loss notes.","val":12},{"id":"agent:ondine","kind":"agent","label":"Ondine","subtitle":"AI Transformation Architect","body":"Models the AI-native target state for each PortCo. The lever no traditional ops partner can pull.","val":14},{"id":"agent:wren","kind":"agent","label":"Wren","subtitle":"Pricing Analyst","body":"Continuous pricing intelligence. Speaks in elasticity, designs tests.","val":11},{"id":"agent:cyan","kind":"agent","label":"Cyan","subtitle":"Procurement Aggregator","body":"Cross-portfolio procurement. Forecasted EUR 240k/yr savings on coordinated Twilio renegotiation.","val":11},{"id":"agent:marigold","kind":"agent","label":"Marigold","subtitle":"Org Design Operator","val":10},{"id":"agent:indigo","kind":"agent","label":"Indigo","subtitle":"Integration PMO","val":10},{"id":"agent:sage","kind":"agent","label":"Sage","subtitle":"Benchmarking Steward","body":"Every KPI gets contextualized as a percentile against the portfolio's same-sector subset.","val":12},{"id":"portco:halcyon","kind":"portco","label":"Halcyon Logistics","subtitle":"value_creation · €220m EV","body":"Logistics tech. AI Transformation Architect target-state model ready; dispatch is the first rebuild target.","val":16},{"id":"portco:apex","kind":"portco","label":"ApexHealth","subtitle":"value_creation · €95m EV","body":"Healthtech SaaS. Briar's ICP-tightening test in flight; CRO Karen approved.","val":13},{"id":"portco:verdant","kind":"portco","label":"Verdant SaaS","subtitle":"value_creation · €48m EV","body":"Vertical SaaS. Sage flagged 31st-percentile gross margin; cost_reduction playbook v2 recommended.","val":14},{"id":"portco:solstice","kind":"portco","label":"Solstice Energy","subtitle":"onboarding · €140m EV","val":12},{"id":"portco:tern","kind":"portco","label":"Tern Marketplace","subtitle":"harvest · €72m EV","val":11},{"id":"portco:cobalt","kind":"portco","label":"Cobalt Cyber","subtitle":"value_creation · €28m EV","val":10},{"id":"pb:cost-reduction-v2","kind":"playbook","label":"cost_reduction v2","body":"Average uplift 9pp gross margin within 18 months across 3 portfolio applications.","val":11},{"id":"pb:icp-tightening","kind":"playbook","label":"icp_tightening","body":"Forecast 18% close-rate lift, 12% deal-count drop, net 5% revenue uplift.","val":9},{"id":"pb:ai-native-rebuild-dispatch","kind":"playbook","label":"ai_native_rebuild · dispatch","body":"Sub-minute routing replaces manual dispatch. Owned by Ondine.","val":10},{"id":"pb:procurement-aggregation","kind":"playbook","label":"procurement_aggregation","val":9},{"id":"pb:org-redesign-cs","kind":"playbook","label":"org_redesign · CS","val":8},{"id":"iv:apex-icp-test","kind":"intervention","label":"ApexHealth · ICP test","subtitle":"in_flight","body":"Briar's tightening proposal, 10% cohort A/B. First results due Friday.","val":10},{"id":"iv:halcyon-dispatch-rebuild","kind":"intervention","label":"Halcyon · dispatch rebuild","subtitle":"proposed","body":"Quarter-by-quarter migration plan. PortCo CEO requested variant B (comms first).","val":11},{"id":"iv:twilio-aggregation","kind":"intervention","label":"Cross-portfolio · Twilio re-neg","subtitle":"in_flight","body":"Six PortCos coordinated. Forecast EUR 240k/yr savings. Contractor briefed.","val":9},{"id":"iv:verdant-cost-review","kind":"intervention","label":"Verdant · cost review","subtitle":"awaiting_portco","val":8},{"id":"bn:halcyon-manual-dispatch","kind":"bottleneck","label":"Manual dispatch","subtitle":"high · Halcyon","body":"14 ops staff, no real-time tracking. Gates driver utilization, ETA accuracy, ops headcount.","val":10},{"id":"bn:apex-broad-icp","kind":"bottleneck","label":"ICP too broad","subtitle":"mid · ApexHealth","val":8},{"id":"bn:verdant-gross-margin","kind":"bottleneck","label":"31st-pct gross margin","subtitle":"mid · Verdant","val":9}],"links":[{"source":"agent:ondine","target":"portco:halcyon","label":"authorized","weight":3},{"source":"agent:ondine","target":"portco:apex","label":"authorized","weight":2},{"source":"agent:ondine","target":"portco:solstice","label":"authorized","weight":2},{"source":"agent:ondine","target":"portco:verdant","label":"authorized","weight":2},{"source":"agent:briar","target":"portco:apex","label":"authorized","weight":3},{"source":"agent:briar","target":"portco:halcyon","label":"authorized","weight":2},{"source":"agent:briar","target":"portco:tern","label":"authorized","weight":1},{"source":"agent:wren","target":"portco:verdant","label":"authorized","weight":2},{"source":"agent:wren","target":"portco:cobalt","label":"authorized","weight":1},{"source":"agent:cyan","target":"portco:halcyon","label":"authorized","weight":1},{"source":"agent:cyan","target":"portco:apex","label":"authorized","weight":1},{"source":"agent:cyan","target":"portco:verdant","label":"authorized","weight":1},{"source":"agent:cyan","target":"portco:tern","label":"authorized","weight":1},{"source":"agent:cyan","target":"portco:cobalt","label":"authorized","weight":1},{"source":"agent:cyan","target":"portco:solstice","label":"authorized","weight":1},{"source":"agent:marigold","target":"portco:halcyon","label":"authorized","weight":2},{"source":"agent:marigold","target":"portco:verdant","label":"authorized","weight":1},{"source":"agent:indigo","target":"portco:verdant","label":"authorized · integration","weight":2},{"source":"agent:sage","target":"portco:verdant","label":"benchmarked","weight":2},{"source":"agent:sage","target":"portco:halcyon","label":"benchmarked","weight":1},{"source":"portco:halcyon","target":"bn:halcyon-manual-dispatch","weight":2},{"source":"portco:apex","target":"bn:apex-broad-icp","weight":2},{"source":"portco:verdant","target":"bn:verdant-gross-margin","weight":2},{"source":"bn:halcyon-manual-dispatch","target":"iv:halcyon-dispatch-rebuild","label":"triggered","weight":2},{"source":"bn:apex-broad-icp","target":"iv:apex-icp-test","label":"triggered","weight":2},{"source":"bn:verdant-gross-margin","target":"iv:verdant-cost-review","label":"triggered","weight":2},{"source":"iv:halcyon-dispatch-rebuild","target":"pb:ai-native-rebuild-dispatch","label":"uses","weight":2},{"source":"iv:apex-icp-test","target":"pb:icp-tightening","label":"uses","weight":2},{"source":"iv:twilio-aggregation","target":"pb:procurement-aggregation","label":"uses","weight":2},{"source":"iv:verdant-cost-review","target":"pb:cost-reduction-v2","label":"uses","weight":2},{"source":"pb:cost-reduction-v2","target":"portco:halcyon","label":"proven","weight":1},{"source":"pb:cost-reduction-v2","target":"portco:cobalt","label":"proven","weight":1},{"source":"pb:cost-reduction-v2","target":"portco:tern","label":"proven (exited)","weight":1},{"source":"pb:icp-tightening","target":"portco:tern","label":"proven","weight":1},{"source":"pb:procurement-aggregation","target":"portco:halcyon","label":"applied","weight":1},{"source":"pb:procurement-aggregation","target":"portco:apex","label":"applied","weight":1},{"source":"pb:procurement-aggregation","target":"portco:verdant","label":"applied","weight":1},{"source":"pb:procurement-aggregation","target":"portco:tern","label":"applied","weight":1},{"source":"pb:procurement-aggregation","target":"portco:cobalt","label":"applied","weight":1},{"source":"pb:procurement-aggregation","target":"portco:solstice","label":"applied","weight":1},{"source":"iv:twilio-aggregation","target":"portco:halcyon"},{"source":"iv:twilio-aggregation","target":"portco:apex"},{"source":"iv:twilio-aggregation","target":"portco:verdant"},{"source":"iv:twilio-aggregation","target":"portco:tern"},{"source":"iv:twilio-aggregation","target":"portco:cobalt"},{"source":"iv:twilio-aggregation","target":"portco:solstice"},{"source":"agent:cyan","target":"iv:twilio-aggregation","label":"owns","weight":2}],"kind_colors":{"agent":"#f4b942","portco":"#8b7cf7","playbook":"#5cd9b3","intervention":"#7cc4f7","bottleneck":"#f97e63"},"kind_labels":{"agent":"AI colleague","portco":"PortCo","playbook":"Playbook","intervention":"Intervention","bottleneck":"Bottleneck"}};
+
+/* ---- Per-kind presentation rules ---- */
+// Lane order, left to right: agent, portco, bottleneck, intervention, playbook.
+const KIND_ORDER = ["agent", "portco", "bottleneck", "intervention", "playbook"];
+
+// Cytoscape node-shape per kind. Maps to the legend glyph class too.
+const KIND_SHAPE = {
+  agent: "ellipse",
+  portco: "round-rectangle",
+  bottleneck: "diamond",
+  intervention: "round-hexagon",
+  playbook: "rectangle"
+};
+const LEGEND_GLYPH = {
+  agent: "ellipse",
+  portco: "rrect",
+  bottleneck: "diamond",
+  intervention: "hex",
+  playbook: "rect"
+};
+
+const COLORS = DATA.kind_colors;
+const LABELS = DATA.kind_labels;
+
+// Quick lookup of a node record by id, used by the inspector.
+const NODE_BY_ID = {};
+DATA.nodes.forEach(function (n) { NODE_BY_ID[n.id] = n; });
+
+/* ---- Node sizing: cube-root of val, clamped so small nodes stay readable ---- */
+function nodeSize(val) {
+  const v = (typeof val === "number" && val > 0) ? val : 1;
+  const base = Math.cbrt(v); // roughly 2.0 to 2.5 across this data set
+  const px = base * 26;      // scale up to pixels
+  return Math.max(46, Math.min(96, Math.round(px)));
+}
+
+/* ---- Build the live count strip ---- */
+(function renderCounts() {
+  const counts = {};
+  KIND_ORDER.forEach(function (k) { counts[k] = 0; });
+  DATA.nodes.forEach(function (n) {
+    if (counts[n.kind] === undefined) counts[n.kind] = 0;
+    counts[n.kind] += 1;
+  });
+  const host = document.getElementById("kgCounts");
+  KIND_ORDER.forEach(function (k) {
+    const el = document.createElement("span");
+    el.className = "kg-count";
+    el.innerHTML =
+      '<span class="swatch" style="background:' + COLORS[k] + '"></span>' +
+      '<span class="num">' + counts[k] + '</span> ' +
+      escapeHtml(LABELS[k]) + (counts[k] === 1 ? "" : "s");
+    host.appendChild(el);
+  });
+})();
+
+/* ---- Build the always-on legend (color plus shape) ---- */
+(function renderLegend() {
+  const host = document.getElementById("kgLegend");
+  const hint = host.querySelector(".hint");
+  KIND_ORDER.forEach(function (k) {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML =
+      '<span class="kg-glyph ' + LEGEND_GLYPH[k] + '" style="background:' + COLORS[k] + '"></span>' +
+      escapeHtml(LABELS[k]);
+    host.insertBefore(row, hint);
+  });
+})();
+
+/* ---- Small HTML escaper for inspector copy ---- */
+function escapeHtml(s) {
+  if (s === undefined || s === null) return "";
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/* ---- Boot Cytoscape once the CDN scripts have loaded ---- */
+window.addEventListener("load", function () {
+  if (typeof cytoscape === "undefined") {
+    document.getElementById("kgLoading").textContent = "Graph engine did not load. Check your connection.";
+    return;
+  }
+  // Register the dagre layout extension.
+  if (typeof cytoscapeDagre !== "undefined") {
+    cytoscape.use(cytoscapeDagre);
+  }
+  buildGraph();
+});
+
+let cy = null;
+let selectedId = null;
+
+function buildGraph() {
+  // ---- Translate the data into Cytoscape elements ----
+  const elements = [];
+
+  DATA.nodes.forEach(function (n) {
+    elements.push({
+      data: {
+        id: n.id,
+        label: n.label,
+        kind: n.kind,
+        color: COLORS[n.kind] || "#9aa",
+        shape: KIND_SHAPE[n.kind] || "ellipse",
+        size: nodeSize(n.val),
+        rank: KIND_ORDER.indexOf(n.kind)
+      }
+    });
+  });
+
+  DATA.links.forEach(function (l, i) {
+    elements.push({
+      data: {
+        id: "e" + i,
+        source: l.source,
+        target: l.target,
+        label: l.label || ""
+      }
+    });
+  });
+
+  // ---- Stylesheet ----
+  const style = [
+    {
+      selector: "node",
+      style: {
+        "background-color": "data(color)",
+        "background-opacity": 0.92,
+        "shape": "data(shape)",
+        "width": "data(size)",
+        "height": "data(size)",
+        "label": "data(label)",
+        "color": "#eef1f6",
+        "font-family": "IBM Plex Sans, sans-serif",
+        "font-size": 13,
+        "font-weight": 500,
+        "text-valign": "bottom",
+        "text-halign": "center",
+        "text-margin-y": 5,
+        "text-wrap": "wrap",
+        "text-max-width": 132,
+        "text-outline-width": 3,
+        "text-outline-color": "#02050d",
+        "text-outline-opacity": 0.9,
+        "border-width": 2,
+        "border-color": "#02050d",
+        "border-opacity": 0.55,
+        "overlay-opacity": 0,
+        "transition-property": "opacity, border-width, border-color, background-opacity",
+        "transition-duration": "180ms"
+      }
+    },
+    {
+      // PortCos run a touch taller as round-rectangles so the longer
+      // names sit better; keep them readable.
+      selector: 'node[kind = "playbook"]',
+      style: { "width": "mapData(size, 46, 96, 56, 110)" }
+    },
+    {
+      selector: "edge",
+      style: {
+        "width": 1.6,
+        "line-color": "#3a4256",
+        "line-opacity": 0.55,
+        "curve-style": "bezier",
+        "target-arrow-shape": "triangle",
+        "target-arrow-color": "#4a5468",
+        "arrow-scale": 0.85,
+        "label": "",
+        "font-family": "IBM Plex Mono, monospace",
+        "font-size": 9,
+        "color": "#c8cedd",
+        "text-background-color": "#02050d",
+        "text-background-opacity": 0.85,
+        "text-background-padding": 3,
+        "text-rotation": "autorotate",
+        "transition-property": "line-color, line-opacity, width, target-arrow-color",
+        "transition-duration": "180ms"
+      }
+    },
+    // Show the relationship label on edge hover.
+    {
+      selector: "edge.lbl",
+      style: {
+        "label": "data(label)",
+        "line-color": "#7c8aa8",
+        "line-opacity": 0.95,
+        "target-arrow-color": "#7c8aa8",
+        "width": 2.4,
+        "z-index": 30
+      }
+    },
+    // Selection highlight: the picked node.
+    {
+      selector: "node.sel",
+      style: {
+        "border-width": 4,
+        "border-color": "#f6c453",
+        "border-opacity": 1,
+        "background-opacity": 1
+      }
+    },
+    // 1-hop neighbors stay bright.
+    {
+      selector: "node.neighbor",
+      style: { "background-opacity": 1 }
+    },
+    // Active edges in the neighborhood, with their labels on.
+    {
+      selector: "edge.active",
+      style: {
+        "label": "data(label)",
+        "line-color": "#f6c453",
+        "line-opacity": 0.95,
+        "target-arrow-color": "#f6c453",
+        "width": 2.6,
+        "z-index": 20
+      }
+    },
+    // Dimmed elements when something is selected.
+    {
+      selector: ".faded",
+      style: { "opacity": 0.12 }
+    }
+  ];
+
+  // ---- Layout: layered left to right, ranked by kind ----
+  const layout = {
+    name: "dagre",
+    rankDir: "LR",
+    align: "UL",
+    nodeSep: 26,
+    edgeSep: 12,
+    rankSep: 130,
+    ranker: "network-simplex",
+    fit: true,
+    padding: 60,
+    // Force the five lanes in our chosen order by rank.
+    nodeDimensionsIncludeLabels: false
+  };
+
+  cy = cytoscape({
+    container: document.getElementById("cy"),
+    elements: elements,
+    style: style,
+    layout: layout,
+    minZoom: 0.25,
+    maxZoom: 2.6,
+    wheelSensitivity: 0.25,
+    boxSelectionEnabled: false,
+    autoungrabify: false
+  });
+
+  // dagre ranks by graph topology. We want strict lanes by kind, so
+  // after layout we snap each node's x to its kind lane while keeping
+  // the y dagre computed (which already untangles the within-lane order).
+  cy.ready(function () {
+    snapToLanes();
+    cy.fit(undefined, 50);
+    const loader = document.getElementById("kgLoading");
+    loader.classList.add("is-hidden");
+    setTimeout(function () { loader.style.display = "none"; }, 450);
+  });
+
+  // ---- Interactions ----
+  cy.on("tap", "node", function (evt) {
+    selectNode(evt.target.id());
+  });
+
+  cy.on("mouseover", "edge", function (evt) {
+    if (selectedId) return; // selection already shows labels
+    if (evt.target.data("label")) evt.target.addClass("lbl");
+  });
+  cy.on("mouseout", "edge", function (evt) {
+    evt.target.removeClass("lbl");
+  });
+
+  // Background tap deselects.
+  cy.on("tap", function (evt) {
+    if (evt.target === cy) deselect();
+  });
+
+  wireSearch();
+  wireInspectorClose();
+
+  // Expose the instance under a namespaced handle for debugging.
+  // Note: window.cy would collide with the <div id="cy"> element, which
+  // browsers auto-expose as a global, so use a distinct name.
+  window.__kg = { cy: cy, select: selectNode, deselect: deselect };
+}
+
+/* ---- Snap nodes into five vertical lanes by kind ---- */
+function snapToLanes() {
+  // Collect dagre-computed extents.
+  const ext = cy.elements().boundingBox();
+  const laneCount = KIND_ORDER.length;
+  const usableW = Math.max(ext.w, 900);
+  const left = ext.x1;
+  const step = usableW / (laneCount - 1 || 1);
+
+  // For each lane, keep the relative y dagre gave, just reposition x.
+  KIND_ORDER.forEach(function (kind, idx) {
+    const laneX = left + step * idx;
+    const laneNodes = cy.nodes('[kind = "' + kind + '"]');
+    // Spread nodes vertically within the lane, preserving dagre order.
+    const sorted = laneNodes.sort(function (a, b) {
+      return a.position("y") - b.position("y");
+    });
+    const n = sorted.length;
+    const laneH = Math.max(ext.h, 520);
+    const top = ext.y1;
+    const gap = n > 1 ? laneH / (n - 1) : 0;
+    sorted.forEach(function (node, i) {
+      const y = n > 1 ? top + gap * i : top + laneH / 2;
+      node.position({ x: laneX, y: y });
+    });
+  });
+}
+
+/* ---- Selection: highlight node + 1-hop, dim rest, open inspector ---- */
+function selectNode(id, doFit) {
+  const node = cy.getElementById(id);
+  if (!node || node.empty()) return;
+  selectedId = id;
+
+  cy.elements().removeClass("sel neighbor active faded lbl");
+
+  const neighborhood = node.closedNeighborhood();
+  const connectedEdges = node.connectedEdges();
+
+  // Dim everything, then re-light the neighborhood.
+  cy.elements().addClass("faded");
+  neighborhood.removeClass("faded");
+  connectedEdges.removeClass("faded");
+
+  node.addClass("sel");
+  node.neighborhood("node").addClass("neighbor");
+  connectedEdges.addClass("active");
+
+  if (doFit !== false) {
+    cy.animate({ fit: { eles: neighborhood, padding: 90 }, duration: 380, easing: "ease-in-out" });
+  }
+
+  openInspector(id);
+}
+
+function deselect() {
+  selectedId = null;
+  cy.elements().removeClass("sel neighbor active faded lbl");
+  closeInspector();
+  cy.animate({ fit: { eles: cy.elements(), padding: 50 }, duration: 360, easing: "ease-in-out" });
+}
+
+/* ---- Inspector (plain DOM) ---- */
+function openInspector(id) {
+  const n = NODE_BY_ID[id];
+  if (!n) return;
+
+  const insp = document.getElementById("kgInspector");
+  const app = document.getElementById("kgApp");
+  const color = COLORS[n.kind] || "#9aa";
+
+  // Header.
+  document.getElementById("kgInspKind").innerHTML =
+    '<span class="dot" style="background:' + color + '"></span>' + escapeHtml(LABELS[n.kind] || n.kind);
+  document.getElementById("kgInspName").textContent = n.label;
+  const sub = document.getElementById("kgInspSubtitle");
+  if (n.subtitle) { sub.textContent = n.subtitle; sub.style.display = ""; }
+  else { sub.style.display = "none"; }
+
+  // Body: copy plus grouped, clickable connections.
+  const body = document.getElementById("kgInspBody");
+  let html = "";
+  if (n.body) {
+    html += '<p class="copy">' + escapeHtml(n.body) + "</p>";
+  } else {
+    html += '<p class="empty">No description on this node yet.</p>';
+  }
+
+  // Gather connections: outgoing (this -> other) and incoming (other -> this).
+  const out = [];
+  const inc = [];
+  DATA.links.forEach(function (l) {
+    if (l.source === id) out.push({ otherId: l.target, rel: l.label || "at", dir: "out" });
+    if (l.target === id) inc.push({ otherId: l.source, rel: l.label || "at", dir: "in" });
+  });
+
+  html += renderConnGroup("Connects to", out);
+  html += renderConnGroup("Connected from", inc);
+
+  if (out.length === 0 && inc.length === 0) {
+    html += '<p class="empty">No connections in this view.</p>';
+  }
+
+  body.innerHTML = html;
+
+  // Wire each connection button to re-select its node.
+  Array.prototype.forEach.call(body.querySelectorAll(".kg-conn"), function (btn) {
+    btn.addEventListener("click", function () {
+      selectNode(btn.getAttribute("data-id"));
+    });
+  });
+
+  insp.classList.add("is-open");
+  insp.setAttribute("aria-hidden", "false");
+  app.classList.add("insp-open");
+}
+
+function renderConnGroup(title, list) {
+  if (!list.length) return "";
+  let html = '<div class="kg-conn-group"><h5>' + escapeHtml(title) + " (" + list.length + ")</h5>";
+  list.forEach(function (c) {
+    const other = NODE_BY_ID[c.otherId];
+    if (!other) return;
+    const color = COLORS[other.kind] || "#9aa";
+    html +=
+      '<button class="kg-conn" type="button" data-id="' + escapeHtml(other.id) + '">' +
+        '<span class="dot" style="background:' + color + '"></span>' +
+        '<span class="label">' + escapeHtml(other.label) + "</span>" +
+        '<span class="rel">' + escapeHtml(c.rel) + "</span>" +
+      "</button>";
+  });
+  html += "</div>";
+  return html;
+}
+
+function closeInspector() {
+  const insp = document.getElementById("kgInspector");
+  insp.classList.remove("is-open");
+  insp.setAttribute("aria-hidden", "true");
+  document.getElementById("kgApp").classList.remove("insp-open");
+}
+
+function wireInspectorClose() {
+  document.getElementById("kgClose").addEventListener("click", deselect);
+}
+
+/* ---- Search: filter and center a node by name ---- */
+function wireSearch() {
+  const input = document.getElementById("kgSearch");
+  const suggest = document.getElementById("kgSuggest");
+  let activeIdx = -1;
+  let matches = [];
+
+  function close() {
+    suggest.classList.remove("is-open");
+    suggest.innerHTML = "";
+    activeIdx = -1;
+    matches = [];
+  }
+
+  function pick(id) {
+    input.value = NODE_BY_ID[id] ? NODE_BY_ID[id].label : "";
+    close();
+    selectNode(id);
+  }
+
+  function render(q) {
+    const needle = q.trim().toLowerCase();
+    if (!needle) { close(); return; }
+    matches = DATA.nodes.filter(function (n) {
+      return n.label.toLowerCase().indexOf(needle) !== -1 ||
+             (n.subtitle && n.subtitle.toLowerCase().indexOf(needle) !== -1);
+    }).slice(0, 8);
+
+    if (!matches.length) { close(); return; }
+
+    suggest.innerHTML = "";
+    matches.forEach(function (n, i) {
+      const li = document.createElement("li");
+      li.setAttribute("role", "option");
+      li.setAttribute("data-id", n.id);
+      if (i === activeIdx) li.classList.add("is-active");
+      li.innerHTML =
+        '<span class="dot" style="background:' + (COLORS[n.kind] || "#9aa") + '"></span>' +
+        escapeHtml(n.label) +
+        '<span class="k">' + escapeHtml(LABELS[n.kind] || n.kind) + "</span>";
+      li.addEventListener("click", function () { pick(n.id); });
+      suggest.appendChild(li);
+    });
+    suggest.classList.add("is-open");
+  }
+
+  input.addEventListener("input", function () { activeIdx = -1; render(input.value); });
+  input.addEventListener("focus", function () { if (input.value) render(input.value); });
+
+  input.addEventListener("keydown", function (e) {
+    if (!matches.length) {
+      if (e.key === "Enter" && input.value.trim()) {
+        // Direct best-effort match on Enter even without an open list.
+        const needle = input.value.trim().toLowerCase();
+        const hit = DATA.nodes.find(function (n) {
+          return n.label.toLowerCase().indexOf(needle) !== -1;
+        });
+        if (hit) pick(hit.id);
+      }
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      activeIdx = (activeIdx + 1) % matches.length;
+      render(input.value);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      activeIdx = (activeIdx - 1 + matches.length) % matches.length;
+      render(input.value);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const idx = activeIdx >= 0 ? activeIdx : 0;
+      pick(matches[idx].id);
+    } else if (e.key === "Escape") {
+      close();
+      input.blur();
+    }
+  });
+
+  // Close the suggestion list on outside click.
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest(".kg-search")) close();
+  });
+}
+
+/* ---- Keep the graph fit on viewport resize ---- */
+let resizeTimer = null;
+window.addEventListener("resize", function () {
+  if (!cy) return;
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(function () {
+    cy.resize();
+    if (selectedId) {
+      const node = cy.getElementById(selectedId);
+      if (node && !node.empty()) {
+        cy.fit(node.closedNeighborhood(), 90);
+      }
+    } else {
+      cy.fit(undefined, 50);
+    }
+  }, 160);
+});
+</script>
+
+</body>
+</html>
