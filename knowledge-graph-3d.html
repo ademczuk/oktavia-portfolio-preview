@@ -1266,7 +1266,7 @@ function selectNode(id, ms = 900) {
   pauseSpin();
   closeSearch();
   const render = nodeRender.get(id);
-  const distance = render ? clamp(render.radius * 13, 250, 360) : node.kind === "portco" ? 250 : 180;
+  const distance = render ? clamp(render.radius * 14, 340, 470) : node.kind === "portco" ? 320 : 240;
   frameNode(id, ms, distance);
   openInspector(node);
   applyVisualState();
