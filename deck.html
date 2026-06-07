@@ -509,6 +509,17 @@
     box-shadow: 0 0 10px var(--glow);
     animation: pulse 2.8s ease-in-out infinite;
   }
+  .preview-pill--cta {
+    color: var(--accent);
+    border-color: var(--accent-line);
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.18s ease, border-color 0.18s ease;
+  }
+  .preview-pill--cta:hover {
+    transform: translateY(-1px);
+    border-color: var(--accent);
+  }
 
   /* ---- See it running: screenshot slides ---- */
   .shot {
@@ -998,13 +1009,14 @@
       <section data-slide-name="See it running, knowledge graph">
         <div class="slide-pad">
           <span class="eyebrow">Memory that stays</span>
-          <h3 class="shot-head">Memory that stays.</h3>
+          <h3 class="shot-head">Memory that stays. Open the live map.</h3>
           <div class="shot">
             <div class="shot-frame">
-              <img src="screens/06-graph.jpg" loading="eager" decoding="async" width="1500" height="712"
-                   alt="The Oktavia Portfolio knowledge graph: PortCos, agents, playbooks, and interventions as one navigable graph of the firm's institutional memory." />
+              <img src="screens/06-graph-3d.png" loading="eager" decoding="async" width="1440" height="960"
+                   alt="The Oktavia Portfolio knowledge graph in 3D: AI colleagues, PortCos, value leaks, interventions, and playbooks laid out left to right as one navigable value-chain operating map." />
             </div>
-            <p class="shot-cap">PortCos, agents, playbooks, and interventions as one navigable graph, so the firm's institutional memory survives when an operating partner rotates out.</p>
+            <p class="shot-cap">PortCos, agents, value leaks, interventions, and playbooks as one operating map of the firm, so institutional memory survives when an operating partner rotates out. This is the live build, not a picture of one. Open it, drag to rotate, click any node to inspect.</p>
+            <a class="preview-pill preview-pill--cta" href="knowledge-graph-3d.html" target="_blank" rel="noopener"><span class="dot"></span> Open the live 3D operating map</a>
             <p class="shot-note">Preview, seeded demo data</p>
           </div>
           <div class="slide-foot">See it running, 5 of 6</div>
