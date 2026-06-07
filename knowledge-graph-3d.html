@@ -1,0 +1,1666 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Oktavia Portfolio - 3D knowledge graph</title>
+<meta name="description" content="A premium 3D operating map for the Oktavia Portfolio knowledge graph." />
+<link rel="icon" href="data:," />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+
+<style>
+  :root {
+    --color-background: #04070f;
+    --color-foreground: #f6f8fc;
+    --color-muted-foreground: #9298a5;
+    --kg-amber: #f4b942;
+    --kg-teal: #5cd9b3;
+    --kg-coral: #f97e63;
+    --kg-purple: #8b7cf7;
+    --kg-blue: #7cc4f7;
+    --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    --font-display: "Instrument Serif", Georgia, serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 50% 42%, rgb(244 185 66 / 0.055), transparent 52%),
+      linear-gradient(180deg, #02050d 0%, #04070f 100%);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+
+  #kg3d {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    background:
+      radial-gradient(circle at 50% 45%, rgb(124 196 247 / 0.035), transparent 46%),
+      radial-gradient(circle at 36% 30%, rgb(244 185 66 / 0.05), transparent 34%),
+      linear-gradient(180deg, #02050d, #04070f);
+  }
+
+  #kg3d canvas {
+    display: block;
+  }
+
+  #kgBoot {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #02050d;
+    color: var(--color-muted-foreground);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    transition: opacity 600ms ease;
+  }
+
+  #kgBoot.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .kg-boot-dot {
+    width: 8px;
+    height: 8px;
+    margin-right: 10px;
+    border-radius: 50%;
+    background: var(--kg-amber);
+    box-shadow: 0 0 16px rgb(244 185 66 / 0.9);
+    animation: kgpulse 1.35s ease-in-out infinite;
+  }
+
+  @keyframes kgpulse {
+    0%, 100% { opacity: 0.35; transform: scale(0.86); }
+    50% { opacity: 1; transform: scale(1.08); }
+  }
+
+  .kg-glass {
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: 14px;
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.07), rgb(255 255 255 / 0.028)),
+      rgb(4 7 15 / 0.78);
+    box-shadow: 0 22px 70px rgb(0 0 0 / 0.46), inset 0 1px 0 rgb(255 255 255 / 0.07);
+    backdrop-filter: blur(18px) saturate(135%);
+  }
+
+  .kg-corner-tl {
+    position: fixed;
+    top: 18px;
+    left: 18px;
+    z-index: 30;
+    width: 352px;
+    max-width: calc(100vw - 36px);
+  }
+
+  .kg-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .kg-brand-mark {
+    width: 38px;
+    height: 38px;
+    flex: none;
+    border: 1px solid rgb(244 185 66 / 0.38);
+    border-radius: 11px;
+    background: rgb(244 185 66 / 0.1);
+    color: var(--kg-amber);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 22px rgb(244 185 66 / 0.22);
+  }
+
+  .kg-eyebrow {
+    margin: 0;
+    color: var(--kg-amber);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .kg-title {
+    margin: 0;
+    color: var(--color-foreground);
+    font-family: var(--font-display);
+    font-size: 23px;
+    font-weight: 400;
+    line-height: 1.05;
+  }
+
+  .kg-note {
+    padding: 11px 13px;
+    color: rgb(246 248 252 / 0.72);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .kg-note strong {
+    color: var(--kg-amber);
+    font-weight: 600;
+  }
+
+  .kg-search {
+    position: relative;
+    margin-top: 10px;
+  }
+
+  .kg-search-input {
+    width: 100%;
+    height: 42px;
+    box-sizing: border-box;
+    border: 1px solid rgb(255 255 255 / 0.12);
+    border-radius: 12px;
+    outline: none;
+    background: rgb(4 7 15 / 0.74);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    padding: 0 36px 0 14px;
+    transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+  }
+
+  .kg-search-input:focus {
+    border-color: rgb(94 234 212 / 0.5);
+    background: rgb(94 234 212 / 0.07);
+    box-shadow: 0 0 0 3px rgb(94 234 212 / 0.1);
+  }
+
+  .kg-search-input::placeholder {
+    color: var(--color-muted-foreground);
+  }
+
+  .kg-search-clear {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    display: none;
+    width: 24px;
+    height: 24px;
+    border: 0;
+    border-radius: 7px;
+    background: rgb(255 255 255 / 0.06);
+    color: var(--color-muted-foreground);
+    cursor: pointer;
+    transform: translateY(-50%);
+  }
+
+  .kg-search.has-query .kg-search-clear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .kg-search-results {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    display: none;
+    max-height: 320px;
+    overflow: auto;
+    padding: 6px;
+    border-radius: 14px;
+  }
+
+  .kg-search.open .kg-search-results {
+    display: block;
+  }
+
+  .kg-search-hit {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--color-foreground);
+    padding: 8px 10px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .kg-search-hit:hover,
+  .kg-search-hit.kg-hit-active {
+    background: rgb(94 234 212 / 0.1);
+  }
+
+  .kg-hit-swatch,
+  .kg-conn-swatch,
+  .kg-insp-swatch {
+    width: 9px;
+    height: 9px;
+    flex: none;
+    border-radius: 50%;
+    background: var(--kind-color);
+    box-shadow: 0 0 8px var(--kind-color);
+  }
+
+  .kg-hit-body,
+  .kg-conn-body {
+    min-width: 0;
+  }
+
+  .kg-hit-label,
+  .kg-conn-label {
+    display: block;
+    overflow: hidden;
+    color: var(--color-foreground);
+    font-size: 13px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .kg-hit-meta,
+  .kg-conn-rel {
+    display: block;
+    overflow: hidden;
+    color: var(--color-muted-foreground);
+    font-size: 10.5px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .kg-search-empty {
+    padding: 13px 12px;
+    color: var(--color-muted-foreground);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .kg-corner-tr {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+  }
+
+  .kg-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border: 1px solid rgb(244 185 66 / 0.32);
+    border-radius: 999px;
+    background: rgb(244 185 66 / 0.1);
+    color: color-mix(in srgb, var(--kg-amber) 86%, white);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 6px 11px;
+  }
+
+  .kg-pill-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--kg-amber);
+    box-shadow: 0 0 8px var(--kg-amber);
+  }
+
+  .kg-counts {
+    display: flex;
+    gap: 8px;
+  }
+
+  .kg-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 12px;
+  }
+
+  .kg-chip-swatch,
+  .kg-legend-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--kind-color);
+    box-shadow: 0 0 9px var(--kind-color);
+  }
+
+  .kg-chip-text {
+    line-height: 1.05;
+  }
+
+  .kg-chip-val {
+    display: block;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .kg-chip-label {
+    display: block;
+    color: var(--color-muted-foreground);
+    font-family: var(--font-mono);
+    font-size: 8px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .kg-corner-bl {
+    position: fixed;
+    left: 18px;
+    bottom: 18px;
+    z-index: 30;
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+  }
+
+  .kg-legend {
+    padding: 12px 14px;
+  }
+
+  .kg-legend-title {
+    margin-bottom: 9px;
+    color: var(--color-muted-foreground);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .kg-legend-items {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 16px;
+  }
+
+  .kg-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 0;
+    background: transparent;
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-size: 11.5px;
+    white-space: nowrap;
+    cursor: pointer;
+    padding: 2px 0;
+  }
+
+  .kg-legend-item.off {
+    opacity: 0.34;
+  }
+
+  .kg-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .kg-icon-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: 10px;
+    background: rgb(4 7 15 / 0.7);
+    color: var(--color-muted-foreground);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+  }
+
+  .kg-icon-button:hover {
+    border-color: rgb(94 234 212 / 0.45);
+    background: rgb(94 234 212 / 0.12);
+    color: var(--color-foreground);
+  }
+
+  .kg-icon-button svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .kg-stage-readout {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 30;
+    width: 330px;
+    max-width: calc(100vw - 36px);
+    padding: 13px 14px;
+    color: rgb(246 248 252 / 0.72);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .kg-stage-readout span {
+    color: var(--kg-amber);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+  }
+
+  .kg-inspector {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    bottom: 18px;
+    z-index: 40;
+    width: 360px;
+    max-width: calc(100vw - 36px);
+    overflow-y: auto;
+    padding: 18px;
+    border-radius: 18px;
+    transform: translateX(calc(100% + 26px));
+    transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .kg-inspector.open {
+    transform: translateX(0);
+  }
+
+  .kg-insp-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .kg-insp-kind {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--kind-color);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .kg-insp-close {
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: 9px;
+    background: rgb(255 255 255 / 0.05);
+    color: var(--color-muted-foreground);
+    cursor: pointer;
+  }
+
+  .kg-insp-name {
+    margin-bottom: 6px;
+    color: var(--color-foreground);
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 400;
+    line-height: 1.1;
+  }
+
+  .kg-insp-subtitle {
+    margin-bottom: 12px;
+    color: color-mix(in srgb, var(--kg-amber) 72%, white);
+    font-size: 13px;
+  }
+
+  .kg-insp-body {
+    margin-bottom: 16px;
+    color: var(--color-muted-foreground);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .kg-insp-section-title {
+    margin: 0 0 9px;
+    color: var(--color-muted-foreground);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .kg-conn-group {
+    margin-bottom: 16px;
+  }
+
+  .kg-conn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin-bottom: 6px;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    border-radius: 11px;
+    background: rgb(255 255 255 / 0.03);
+    color: var(--color-foreground);
+    padding: 9px 11px;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 140ms ease, background 140ms ease;
+  }
+
+  .kg-conn:hover {
+    border-color: rgb(94 234 212 / 0.4);
+    background: rgb(94 234 212 / 0.08);
+  }
+
+  @media (max-width: 720px) {
+    .kg-corner-tr .kg-counts,
+    .kg-corner-bl .kg-legend,
+    .kg-stage-readout {
+      display: none;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="kg3d"></div>
+<div id="kgBoot"><span class="kg-boot-dot"></span>Building 3D operating map</div>
+
+<div class="kg-corner-tl">
+  <div class="kg-brand">
+    <span class="kg-brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+    </span>
+    <div>
+      <p class="kg-eyebrow">Oktavia knowledge graph</p>
+      <h1 class="kg-title">Portfolio operating map, in 3D</h1>
+    </div>
+  </div>
+  <div class="kg-note kg-glass">
+    <strong>Value chain layout.</strong> AI colleagues, PortCos, value leaks, interventions, and playbooks are fixed left to right. Drag to rotate; hub size is true graph degree.
+  </div>
+  <div class="kg-search" id="kgSearch">
+    <input id="kgSearchInput" class="kg-search-input" type="text" autocomplete="off" spellcheck="false"
+           placeholder="Search PortCos, value leaks, agents, playbooks" />
+    <button id="kgSearchClear" class="kg-search-clear" aria-label="Clear search">x</button>
+    <div id="kgSearchResults" class="kg-search-results kg-glass" role="listbox"></div>
+  </div>
+</div>
+
+<div class="kg-corner-tr">
+  <span class="kg-pill"><span class="kg-pill-dot"></span>HDR bloom gated</span>
+  <div class="kg-counts" id="kgCounts"></div>
+</div>
+
+<div class="kg-corner-bl">
+  <div class="kg-legend kg-glass">
+    <div class="kg-legend-title">Entity types</div>
+    <div class="kg-legend-items" id="kgLegend"></div>
+  </div>
+  <div class="kg-controls">
+    <button class="kg-icon-button" id="kgReset" title="Reset view">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+      Reset view
+    </button>
+    <button class="kg-icon-button" id="kgHalcyon" title="Gate camera: Halcyon close-up">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>
+      Halcyon gate
+    </button>
+    <button class="kg-icon-button" id="kgRotate" title="Toggle auto-rotate">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9"/><polyline points="21 3 21 9 15 9"/></svg>
+      <span id="kgRotateLabel">Pause spin</span>
+    </button>
+  </div>
+</div>
+
+<div class="kg-stage-readout kg-glass">
+  <span>Focused value path</span><br />
+  Click any node to dim context, open the inspector, and stream amber flow particles along the directed value-chain path only.
+</div>
+
+<aside class="kg-inspector kg-glass" id="kgInspector"></aside>
+
+<script type="module">
+import * as THREE from "https://esm.sh/three@0.184.0";
+import { OrbitControls } from "https://esm.sh/three@0.184.0/examples/jsm/controls/OrbitControls.js?deps=three@0.184.0";
+import {
+  EffectComposer,
+  EffectPass,
+  KernelSize,
+  NoiseEffect,
+  RenderPass,
+  ToneMappingEffect,
+  ToneMappingMode,
+  SelectiveBloomEffect,
+  VignetteEffect,
+  BlendFunction,
+} from "https://esm.sh/postprocessing@6.38.2?deps=three@0.184.0";
+import { Text } from "https://esm.sh/troika-three-text@0.52.4?deps=three@0.184.0";
+import { DEMO_GRAPH, KIND_COLORS, KIND_LABELS, NODE_KIND_ORDER } from "./kg3d-fixture.js";
+
+const container = document.getElementById("kg3d");
+const boot = document.getElementById("kgBoot");
+const countsEl = document.getElementById("kgCounts");
+const legendEl = document.getElementById("kgLegend");
+const rotateLabel = document.getElementById("kgRotateLabel");
+const resetBtn = document.getElementById("kgReset");
+const halcyonBtn = document.getElementById("kgHalcyon");
+const rotateBtn = document.getElementById("kgRotate");
+const searchEl = document.getElementById("kgSearch");
+const searchInput = document.getElementById("kgSearchInput");
+const searchClear = document.getElementById("kgSearchClear");
+const searchResults = document.getElementById("kgSearchResults");
+const inspectorEl = document.getElementById("kgInspector");
+
+const byId = new Map(DEMO_GRAPH.nodes.map((node) => [node.id, node]));
+const linkPairs = DEMO_GRAPH.links.map((link, index) => [byId.get(link.source), byId.get(link.target), link, index]).filter(([source, target]) => source && target);
+const adjacency = buildAdjacency();
+const incident = buildIncident();
+const nodeRender = new Map();
+const hiddenKinds = new Set();
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+const tempObject = new THREE.Object3D();
+let hoverId = null;
+let selectedId = null;
+let currentFocusSet = null;
+let currentPathLinks = [];
+let searchIndex = -1;
+let searchList = [];
+const graphCenter = computeCenter(DEMO_GRAPH.nodes);
+const renderer = new THREE.WebGLRenderer({
+  antialias: true,
+  alpha: false,
+  depth: true,
+  stencil: false,
+  powerPreference: "high-performance",
+});
+
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.95;
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x02050d);
+scene.fog = new THREE.FogExp2(0x02050d, 0.0011);
+
+const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 1800);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.enablePan = false;
+controls.minDistance = 120;
+controls.maxDistance = 980;
+controls.minPolarAngle = 0.25;
+controls.maxPolarAngle = Math.PI * 0.62;
+controls.target.set(graphCenter.x, graphCenter.y, graphCenter.z);
+
+scene.add(new THREE.AmbientLight(0x8aa0c0, 0.18));
+const key = new THREE.DirectionalLight(0xfff1c8, 1.2);
+key.position.set(-260, 240, 320);
+scene.add(key);
+const rim = new THREE.DirectionalLight(0x7cc4f7, 0.55);
+rim.position.set(340, 120, -280);
+scene.add(rim);
+
+const nodeMesh = createInstancedNodes();
+const edgeLines = createEdges();
+const labelGroup = createLabels();
+const flowParticles = createFlowParticles();
+const selectionRing = createSelectionRing();
+scene.add(createLaneGuides());
+scene.add(edgeLines);
+scene.add(nodeMesh);
+scene.add(labelGroup);
+scene.add(flowParticles);
+scene.add(selectionRing);
+
+const composer = new EffectComposer(renderer, { frameBufferType: THREE.HalfFloatType });
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new SelectiveBloomEffect(scene, camera, {
+  mipmapBlur: true,
+  luminanceThreshold: 0.1,
+  luminanceSmoothing: 0.05,
+  intensity: 0.3,
+  radius: 0.75,
+  kernelSize: KernelSize.MEDIUM,
+});
+bloom.selection.add(nodeMesh);
+bloom.ignoreBackground = true;
+const tone = new ToneMappingEffect({
+  mode: ToneMappingMode.ACES_FILMIC,
+  resolution: 256,
+  whitePoint: 16,
+  middleGrey: 0.6,
+  minLuminance: 0.01,
+  averageLuminance: 1,
+  adaptationRate: 1,
+});
+const vignette = new VignetteEffect({ darkness: 0.48, offset: 0.45 });
+const noise = new NoiseEffect({ blendFunction: BlendFunction.SOFT_LIGHT, premultiply: false });
+noise.blendMode.opacity.value = 0.035;
+composer.addPass(new EffectPass(camera, bloom, tone, vignette, noise));
+
+let autoRotate = true;
+let pausedUntil = 0;
+let frameCount = 0;
+let lastFrameTime = performance.now();
+
+frameOverview(0);
+renderChrome();
+applyVisualState();
+boot.classList.add("hidden");
+animate();
+
+controls.addEventListener("start", pauseSpin);
+controls.addEventListener("change", () => {
+  pausedUntil = Math.max(pausedUntil, performance.now() + 180);
+});
+controls.addEventListener("end", () => {
+  pausedUntil = performance.now() + 2200;
+});
+renderer.domElement.addEventListener("pointermove", onPointerMove);
+renderer.domElement.addEventListener("pointerleave", () => setHover(null));
+renderer.domElement.addEventListener("click", onCanvasClick);
+
+resetBtn.addEventListener("click", () => {
+  clearSelection();
+  hiddenKinds.clear();
+  renderChrome();
+  applyVisualState();
+  frameOverview(900);
+  pauseSpin();
+});
+halcyonBtn.addEventListener("click", () => {
+  selectNode("portco:halcyon", 900);
+  pauseSpin();
+});
+rotateBtn.addEventListener("click", () => {
+  autoRotate = !autoRotate;
+  rotateLabel.textContent = autoRotate ? "Pause spin" : "Resume spin";
+});
+searchInput.addEventListener("input", renderSearch);
+searchInput.addEventListener("focus", renderSearch);
+searchInput.addEventListener("keydown", onSearchKeydown);
+searchClear.addEventListener("click", () => {
+  searchInput.value = "";
+  renderSearch();
+  searchInput.focus();
+});
+document.addEventListener("click", (event) => {
+  if (!searchEl.contains(event.target)) closeSearch();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeSearch();
+    clearSelection();
+  }
+});
+window.addEventListener("resize", onResize);
+
+window.__kg = {
+  scene,
+  camera,
+  renderer,
+  composer,
+  nodes: DEMO_GRAPH.nodes,
+  links: DEMO_GRAPH.links,
+  state: () => ({
+    autoRotate,
+    frameCount,
+    camera: camera.position.toArray(),
+    target: controls.target.toArray(),
+    exposure: renderer.toneMappingExposure,
+    bloomThreshold: bloom.luminanceMaterial?.threshold ?? 0.95,
+    visibleLabels: labelGroup.children.filter((label) => label.visible).length,
+    hoverId,
+    selectedId,
+    hiddenKinds: [...hiddenKinds],
+    focusedLinks: currentPathLinks.length,
+  }),
+  frameOverview: (ms = 0) => frameOverview(ms),
+  frameHalcyon: (ms = 0) => selectNode("portco:halcyon", ms),
+  select: (id) => selectNode(id, 800),
+  clear: () => clearSelection(),
+  setHover: (id) => setHover(id),
+  tick: (ms = 16) => renderFrame(performance.now() + ms),
+  settle: (frames = 40, stepMs = 16) => {
+    for (let i = 0; i < frames; i += 1) renderFrame(performance.now() + i * stepMs);
+  },
+};
+
+function createInstancedNodes() {
+  const geometry = new THREE.SphereGeometry(1, 36, 20);
+  const baseColors = new Float32Array(geometry.attributes.position.count * 3);
+  baseColors.fill(1);
+  geometry.setAttribute("color", new THREE.Float32BufferAttribute(baseColors, 3));
+  const material = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    vertexColors: true,
+    transparent: false,
+    depthTest: true,
+    depthWrite: true,
+    toneMapped: false,
+  });
+
+  const mesh = new THREE.InstancedMesh(geometry, material, DEMO_GRAPH.nodes.length);
+  mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  mesh.castShadow = false;
+  mesh.receiveShadow = false;
+  mesh.frustumCulled = false;
+  mesh.renderOrder = 2;
+  const dummy = new THREE.Object3D();
+  DEMO_GRAPH.nodes.forEach((node, index) => {
+    const radius = node.radius * (node.kind === "portco" ? 1.18 : 1.0) * magnitudeScale(node);
+    const color = new THREE.Color(KIND_COLORS[node.kind]).multiplyScalar(emissiveIntensity(node));
+    dummy.position.set(node.x, node.y, node.z);
+    dummy.scale.setScalar(radius);
+    dummy.updateMatrix();
+    mesh.setMatrixAt(index, dummy.matrix);
+    mesh.setColorAt(index, color);
+    nodeRender.set(node.id, {
+      index,
+      radius,
+      color,
+      position: new THREE.Vector3(node.x, node.y, node.z),
+    });
+  });
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.instanceColor.needsUpdate = true;
+  return mesh;
+}
+
+function createEdges() {
+  const positions = [];
+  const colors = [];
+  const baseColors = [];
+  const edgeRanges = [];
+  const segments = 19;
+  for (const [source, target, , index] of linkPairs) {
+    const color = new THREE.Color(KIND_COLORS[source.kind]).lerp(new THREE.Color(KIND_COLORS[target.kind]), 0.35);
+    const start = positions.length / 3;
+    for (let i = 0; i < segments; i += 1) {
+      const a = pointOnEdgeCurve(source, target, index, i / segments);
+      const b = pointOnEdgeCurve(source, target, index, (i + 1) / segments);
+      positions.push(a.x, a.y, a.z, b.x, b.y, b.z);
+      colors.push(color.r, color.g, color.b, color.r, color.g, color.b);
+    }
+    edgeRanges.push({ start, count: segments * 2 });
+    baseColors.push(color.clone());
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+  const material = new THREE.LineBasicMaterial({
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.18,
+    depthTest: true,
+    depthWrite: false,
+    toneMapped: true,
+  });
+  const lines = new THREE.LineSegments(geometry, material);
+  lines.renderOrder = 1;
+  lines.userData.baseColors = baseColors;
+  lines.userData.edgeRanges = edgeRanges;
+  return lines;
+}
+
+function createFlowParticles() {
+  const maxParticles = 220;
+  const geometry = new THREE.BufferGeometry();
+  const positions = new Float32Array(maxParticles * 3);
+  const colors = new Float32Array(maxParticles * 3);
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  geometry.setDrawRange(0, 0);
+  const material = new THREE.PointsMaterial({
+    size: 4.4,
+    sizeAttenuation: true,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.62,
+    depthTest: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    toneMapped: true,
+  });
+  const points = new THREE.Points(geometry, material);
+  points.frustumCulled = false;
+  points.renderOrder = 4;
+  points.userData.maxParticles = maxParticles;
+  return points;
+}
+
+function createSelectionRing() {
+  const geometry = new THREE.RingGeometry(1.13, 1.17, 96);
+  const material = new THREE.MeshBasicMaterial({
+    color: 0xf4b942,
+    transparent: true,
+    opacity: 0,
+    side: THREE.DoubleSide,
+    depthTest: true,
+    depthWrite: false,
+    toneMapped: true,
+  });
+  const ring = new THREE.Mesh(geometry, material);
+  ring.renderOrder = 5;
+  ring.visible = false;
+  return ring;
+}
+
+function updateSelectionRing() {
+  const id = selectedId || hoverId;
+  const node = id ? byId.get(id) : null;
+  const render = id ? nodeRender.get(id) : null;
+  if (!node || !render || hiddenKinds.has(node.kind)) {
+    selectionRing.visible = false;
+    selectionRing.material.opacity = 0;
+    return;
+  }
+  selectionRing.visible = true;
+  selectionRing.position.copy(render.position);
+  selectionRing.quaternion.copy(camera.quaternion);
+  selectionRing.scale.setScalar(render.radius * (selectedId ? 1.38 : 1.26));
+  selectionRing.material.color.set(0xf4b942);
+  selectionRing.material.opacity = selectedId ? 0.72 : 0.52;
+}
+
+function updateFlowParticles(now) {
+  const geometry = flowParticles.geometry;
+  const positions = geometry.attributes.position.array;
+  const colors = geometry.attributes.color.array;
+  let cursor = 0;
+  if (currentPathLinks.length > 0) {
+    const time = now * 0.00034;
+    for (const item of currentPathLinks) {
+      const [source, target] = item;
+      if (hiddenKinds.has(source.kind) || hiddenKinds.has(target.kind)) continue;
+      const color = new THREE.Color(KIND_COLORS[source.kind]).lerp(new THREE.Color(KIND_COLORS[target.kind]), 0.25);
+      for (let k = 0; k < 3; k += 1) {
+        if (cursor >= flowParticles.userData.maxParticles) break;
+        const t = (time + item[3] * 0.071 + k / 3) % 1;
+        const eased = t * t * (3 - 2 * t);
+        const p = pointOnEdgeCurve(source, target, item[3], eased);
+        positions[cursor * 3 + 0] = p.x;
+        positions[cursor * 3 + 1] = p.y;
+        positions[cursor * 3 + 2] = p.z;
+        colors[cursor * 3 + 0] = 1.0;
+        colors[cursor * 3 + 1] = 0.72;
+        colors[cursor * 3 + 2] = 0.24;
+        cursor += 1;
+      }
+    }
+  }
+  geometry.setDrawRange(0, cursor);
+  geometry.attributes.position.needsUpdate = true;
+  geometry.attributes.color.needsUpdate = true;
+}
+
+function pointOnEdgeCurve(source, target, index, t) {
+  const a = new THREE.Vector3(source.x, source.y, source.z);
+  const b = new THREE.Vector3(target.x, target.y, target.z);
+  const mid = a.clone().lerp(b, 0.5);
+  const dir = b.clone().sub(a);
+  const length = Math.max(1, dir.length());
+  const side = new THREE.Vector3(-dir.z, 0.18 * length, dir.x).normalize();
+  const handedness = index % 2 === 0 ? 1 : -1;
+  const curvature = 0.15 + (index % 5) * 0.025;
+  const control = mid.add(side.multiplyScalar(length * curvature * handedness));
+  return quadraticBezier(a, control, b, t);
+}
+
+function quadraticBezier(a, c, b, t) {
+  const mt = 1 - t;
+  return new THREE.Vector3(
+    mt * mt * a.x + 2 * mt * t * c.x + t * t * b.x,
+    mt * mt * a.y + 2 * mt * t * c.y + t * t * b.y,
+    mt * mt * a.z + 2 * mt * t * c.z + t * t * b.z,
+  );
+}
+
+function createLabels() {
+  const group = new THREE.Group();
+  for (const node of DEMO_GRAPH.nodes) {
+    const label = new Text();
+    label.text = node.label;
+    label.fontSize = labelSize(node);
+    label.color = 0xf6f8fc;
+    label.anchorX = "center";
+    label.anchorY = "middle";
+    label.outlineWidth = 0.12;
+    label.outlineColor = 0x02050d;
+    label.outlineOpacity = 0.96;
+    label.depthOffset = -0.4;
+    label.material.depthTest = true;
+    label.material.depthWrite = false;
+    label.material.toneMapped = true;
+    label.position.set(node.x, node.y + node.radius * 2.25 + 8, node.z);
+    label.userData.node = node;
+    label.userData.priority = labelPriority(node);
+    label.userData.visibleAtRest = Boolean(node.persistentLabel);
+    label.visible = Boolean(node.persistentLabel);
+    label.sync();
+    group.add(label);
+  }
+  return group;
+}
+
+function updateLabels() {
+  const candidates = [];
+  const viewport = { width: window.innerWidth, height: window.innerHeight };
+  for (const label of labelGroup.children) {
+    const node = label.userData.node;
+    if (hiddenKinds.has(node.kind)) {
+      label.visible = false;
+      continue;
+    }
+    const render = nodeRender.get(node.id);
+    if (render) {
+      const focused = currentFocusSet?.has(node.id);
+      label.position.set(node.x, node.y + render.radius * (focused ? 2.35 : 1.8) + 10, node.z);
+    }
+    label.quaternion.copy(camera.quaternion);
+    const cameraDistance = camera.position.distanceTo(label.position);
+    label.scale.setScalar(clamp(cameraDistance / 420, 0.55, 1.0));
+    const proximity = cameraDistance < 260;
+    const focusVisible = currentFocusSet?.has(node.id);
+    const baseVisible = currentFocusSet ? focusVisible : true;
+    if (!baseVisible) {
+      label.visible = false;
+      continue;
+    }
+    const rect = estimateLabelRect(label, viewport);
+    if (!rect) {
+      label.visible = false;
+      continue;
+    }
+    candidates.push({
+      label,
+      rect,
+      priority: label.userData.priority + (focusVisible ? 60 : 0) + (proximity ? 16 : 0) + (node.hub ? 8 : 0),
+    });
+  }
+
+  candidates.sort((a, b) => b.priority - a.priority);
+
+  const REST_BUDGET = 8;
+  const FOCUS_BUDGET = 12;
+  const budget = currentFocusSet ? FOCUS_BUDGET : REST_BUDGET;
+
+  const selectedIdx = selectedId
+    ? candidates.findIndex((c) => c.label.userData.node.id === selectedId)
+    : -1;
+  let winners;
+  if (selectedIdx >= 0 && selectedIdx >= budget) {
+    winners = new Set(candidates.slice(0, budget - 1).map((c) => c.label));
+    winners.add(candidates[selectedIdx].label);
+  } else {
+    winners = new Set(candidates.slice(0, budget).map((c) => c.label));
+  }
+
+  for (const candidate of candidates) {
+    candidate.label.visible = winners.has(candidate.label);
+  }
+  if (selectedId) {
+    const selectedLabel = labelGroup.children.find((label) => label.userData.node.id === selectedId);
+    if (selectedLabel && !hiddenKinds.has(selectedLabel.userData.node.kind)) {
+      selectedLabel.visible = true;
+    }
+  }
+}
+
+function estimateLabelRect(label, viewport) {
+  const node = label.userData.node;
+  const projected = label.position.clone().project(camera);
+  if (projected.z < -1 || projected.z > 1) return null;
+  const x = (projected.x * 0.5 + 0.5) * viewport.width;
+  const y = (-projected.y * 0.5 + 0.5) * viewport.height;
+  const width = Math.max(72, node.label.length * label.fontSize * 5.4);
+  const height = label.fontSize * 9.0;
+  const rect = {
+    x1: x - width / 2 - 10,
+    y1: y - height / 2 - 6,
+    x2: x + width / 2 + 10,
+    y2: y + height / 2 + 6,
+  };
+  if (chromeRects(viewport).some((chrome) => rectsOverlap(rect, chrome))) return null;
+  return rect;
+}
+
+function rectsOverlap(a, b) {
+  return a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
+}
+
+function chromeRects(viewport) {
+  return [
+    { x1: 0, y1: 0, x2: Math.min(390, viewport.width), y2: 156 },
+    { x1: Math.max(0, viewport.width - 365), y1: 0, x2: viewport.width, y2: 118 },
+    { x1: 0, y1: Math.max(0, viewport.height - 150), x2: 380, y2: viewport.height },
+    { x1: Math.max(0, viewport.width - 360), y1: Math.max(0, viewport.height - 130), x2: viewport.width, y2: viewport.height },
+  ];
+}
+
+function createLaneGuides() {
+  const group = new THREE.Group();
+  const material = new THREE.LineBasicMaterial({
+    color: 0x3d506c,
+    transparent: true,
+    opacity: 0.18,
+    depthTest: true,
+    depthWrite: false,
+  });
+  for (const kind of NODE_KIND_ORDER) {
+    const x = laneX(kind);
+    const geometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(x, -150, -210),
+      new THREE.Vector3(x, 170, 190),
+    ]);
+    const line = new THREE.Line(geometry, material);
+    line.renderOrder = 0;
+    group.add(line);
+  }
+  return group;
+}
+
+function renderChrome() {
+  const counts = Object.fromEntries(NODE_KIND_ORDER.map((kind) => [kind, 0]));
+  for (const node of DEMO_GRAPH.nodes) counts[node.kind] += 1;
+  countsEl.innerHTML = ["portco", "bottleneck", "intervention"].map((kind) => (
+    `<span class="kg-chip kg-glass" style="--kind-color:${KIND_COLORS[kind]}">` +
+    `<span class="kg-chip-swatch"></span><span class="kg-chip-text">` +
+    `<span class="kg-chip-val">${counts[kind]}</span><span class="kg-chip-label">${KIND_LABELS[kind]}s</span>` +
+    `</span></span>`
+  )).join("");
+  legendEl.innerHTML = NODE_KIND_ORDER.map((kind) => (
+    `<button type="button" class="kg-legend-item ${hiddenKinds.has(kind) ? "off" : ""}" data-kind="${kind}" style="--kind-color:${KIND_COLORS[kind]}"><span class="kg-legend-dot"></span>${KIND_LABELS[kind]}</button>`
+  )).join("");
+  legendEl.querySelectorAll(".kg-legend-item").forEach((item) => {
+    item.addEventListener("click", () => {
+      const kind = item.getAttribute("data-kind");
+      if (hiddenKinds.has(kind)) hiddenKinds.delete(kind);
+      else hiddenKinds.add(kind);
+      renderChrome();
+      applyVisualState();
+    });
+  });
+}
+
+function buildAdjacency() {
+  const map = new Map(DEMO_GRAPH.nodes.map((node) => [node.id, new Set()]));
+  for (const [source, target] of linkPairs) {
+    map.get(source.id)?.add(target.id);
+    map.get(target.id)?.add(source.id);
+  }
+  return map;
+}
+
+function buildIncident() {
+  const map = new Map(DEMO_GRAPH.nodes.map((node) => [node.id, []]));
+  for (const [source, target, link, index] of linkPairs) {
+    map.get(source.id)?.push({ other: target.id, label: link.label, dir: "out", index });
+    map.get(target.id)?.push({ other: source.id, label: link.label, dir: "in", index });
+  }
+  return map;
+}
+
+function onPointerMove(event) {
+  const hit = hitNode(event);
+  setHover(hit?.id ?? null);
+}
+
+function onCanvasClick(event) {
+  const hit = hitNode(event);
+  if (hit) selectNode(hit.id, 900);
+  else clearSelection();
+}
+
+function hitNode(event) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObject(nodeMesh, false);
+  if (!hits.length || hits[0].instanceId == null) return null;
+  return DEMO_GRAPH.nodes[hits[0].instanceId] ?? null;
+}
+
+function setHover(id) {
+  if (id === hoverId) return;
+  hoverId = id && byId.has(id) ? id : null;
+  renderer.domElement.style.cursor = hoverId ? "pointer" : "default";
+  if (hoverId) pauseSpin();
+  applyVisualState();
+}
+
+function selectNode(id, ms = 900) {
+  const node = byId.get(id);
+  if (!node) return;
+  selectedId = id;
+  hoverId = null;
+  pauseSpin();
+  closeSearch();
+  const render = nodeRender.get(id);
+  const distance = render ? clamp(render.radius * 13, 250, 360) : node.kind === "portco" ? 250 : 180;
+  frameNode(id, ms, distance);
+  openInspector(node);
+  applyVisualState();
+}
+
+function clearSelection() {
+  selectedId = null;
+  hoverId = null;
+  inspectorEl.classList.remove("open");
+  renderer.domElement.style.cursor = "default";
+  currentFocusSet = null;
+  currentPathLinks = [];
+  applyVisualState();
+}
+
+function focusId() {
+  return hoverId || selectedId;
+}
+
+function focusInfo(id) {
+  if (!id) return { set: null, pathLinks: [] };
+  const set = new Set([id]);
+  for (const neighbor of adjacency.get(id) ?? []) set.add(neighbor);
+  const pathLinks = directedPathLinks(id);
+  for (const [source, target] of pathLinks) {
+    set.add(source.id);
+    set.add(target.id);
+  }
+  return { set, pathLinks };
+}
+
+function directedPathLinks(id) {
+  const out = new Map();
+  for (const item of linkPairs) {
+    const [source] = item;
+    if (!out.has(source.id)) out.set(source.id, []);
+    out.get(source.id).push(item);
+  }
+  const seenEdges = new Set();
+  const seenNodes = new Set([id]);
+  const queue = [{ id, depth: 0 }];
+  const result = [];
+  while (queue.length) {
+    const item = queue.shift();
+    if (item.depth >= 4) continue;
+    for (const link of out.get(item.id) ?? []) {
+      const target = link[1];
+      const index = link[3];
+      if (!seenEdges.has(index)) {
+        seenEdges.add(index);
+        result.push(link);
+      }
+      if (!seenNodes.has(target.id)) {
+        seenNodes.add(target.id);
+        queue.push({ id: target.id, depth: item.depth + 1 });
+      }
+    }
+  }
+  for (const item of linkPairs) {
+    const [source, target, , index] = item;
+    if ((source.id === id || target.id === id) && !seenEdges.has(index)) {
+      seenEdges.add(index);
+      result.push(item);
+    }
+  }
+  return result;
+}
+
+function applyVisualState() {
+  const active = focusInfo(focusId());
+  currentFocusSet = active.set;
+  currentPathLinks = active.pathLinks;
+  const activeEdgeIndexes = new Set(currentPathLinks.map((item) => item[3]));
+
+  for (const node of DEMO_GRAPH.nodes) {
+    const render = nodeRender.get(node.id);
+    if (!render) continue;
+    const hidden = hiddenKinds.has(node.kind);
+    const related = !currentFocusSet || currentFocusSet.has(node.id);
+    const selected = node.id === selectedId || node.id === hoverId;
+    const scale = hidden ? 0.001 : render.radius * (selected ? 1.1 : related ? 1 : 0.76);
+    const color = render.color.clone().multiplyScalar(hidden ? 0 : related ? 1 : 0.13);
+    tempObject.position.copy(render.position);
+    tempObject.scale.setScalar(scale);
+    tempObject.updateMatrix();
+    nodeMesh.setMatrixAt(render.index, tempObject.matrix);
+    nodeMesh.setColorAt(render.index, color);
+  }
+  nodeMesh.instanceMatrix.needsUpdate = true;
+  nodeMesh.instanceColor.needsUpdate = true;
+
+  const colorAttr = edgeLines.geometry.attributes.color;
+  linkPairs.forEach(([source, target, , index], pairIndex) => {
+    const hidden = hiddenKinds.has(source.kind) || hiddenKinds.has(target.kind);
+    const pathActive = activeEdgeIndexes.has(index);
+    const related = !currentFocusSet || (currentFocusSet.has(source.id) && currentFocusSet.has(target.id));
+    const base = edgeLines.userData.baseColors[pairIndex].clone();
+    const distanceFade = screenLengthFade(source, target);
+    const multiplier = hidden ? 0 : !currentFocusSet ? 0.72 * distanceFade : pathActive ? 2.2 : related ? 1.15 * distanceFade : 0.05;
+    base.multiplyScalar(multiplier);
+    const range = edgeLines.userData.edgeRanges[pairIndex];
+    for (let i = 0; i < range.count; i += 1) {
+      colorAttr.setXYZ(range.start + i, base.r, base.g, base.b);
+    }
+  });
+  colorAttr.needsUpdate = true;
+}
+
+function screenLengthFade(source, target) {
+  const a = new THREE.Vector3(source.x, source.y, source.z).project(camera);
+  const b = new THREE.Vector3(target.x, target.y, target.z).project(camera);
+  const dx = (a.x - b.x) * window.innerWidth * 0.5;
+  const dy = (a.y - b.y) * window.innerHeight * 0.5;
+  const length = Math.hypot(dx, dy);
+  const t = clamp((length - 220) / 620, 0, 1);
+  return 1 - t * 0.62;
+}
+
+function searchHits(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const hits = [];
+  for (const node of DEMO_GRAPH.nodes) {
+    const text = [node.label, node.subtitle || "", node.body || "", node.kind, node.id].join(" ").toLowerCase();
+    let score = 0;
+    if (node.label.toLowerCase().startsWith(q)) score += 30;
+    if (node.label.toLowerCase().includes(q)) score += 20;
+    if (text.includes(q)) score += 12;
+    score += node.degree || 0;
+    if (score > 0 && !hiddenKinds.has(node.kind)) hits.push({ node, score });
+  }
+  hits.sort((a, b) => b.score - a.score || a.node.label.localeCompare(b.node.label));
+  return hits.slice(0, 8).map((hit) => hit.node);
+}
+
+function renderSearch() {
+  const query = searchInput.value;
+  searchEl.classList.toggle("has-query", Boolean(query));
+  if (!query.trim()) {
+    closeSearch();
+    return;
+  }
+  searchList = searchHits(query);
+  searchIndex = -1;
+  if (!searchList.length) {
+    searchResults.innerHTML = '<div class="kg-search-empty">Nothing matches that. Try a PortCo, agent, value leak, or playbook.</div>';
+  } else {
+    searchResults.innerHTML = searchList.map((node, index) => (
+      `<button type="button" class="kg-search-hit" data-index="${index}" style="--kind-color:${KIND_COLORS[node.kind]}">` +
+      `<span class="kg-hit-swatch"></span><span class="kg-hit-body"><span class="kg-hit-label">${escapeHtml(node.label)}</span>` +
+      `<span class="kg-hit-meta">${KIND_LABELS[node.kind]}${node.subtitle ? " · " + escapeHtml(node.subtitle) : ""}</span></span></button>`
+    )).join("");
+    searchResults.querySelectorAll(".kg-search-hit").forEach((button) => {
+      button.addEventListener("click", () => selectNode(searchList[Number(button.getAttribute("data-index"))].id, 900));
+    });
+  }
+  searchEl.classList.add("open");
+}
+
+function closeSearch() {
+  searchEl.classList.remove("open");
+}
+
+function onSearchKeydown(event) {
+  if (!searchList.length) return;
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    searchIndex = (searchIndex + 1) % searchList.length;
+    markSearchHit();
+  } else if (event.key === "ArrowUp") {
+    event.preventDefault();
+    searchIndex = (searchIndex - 1 + searchList.length) % searchList.length;
+    markSearchHit();
+  } else if (event.key === "Enter") {
+    event.preventDefault();
+    selectNode(searchList[searchIndex >= 0 ? searchIndex : 0].id, 900);
+  }
+}
+
+function markSearchHit() {
+  searchResults.querySelectorAll(".kg-search-hit").forEach((button, index) => {
+    button.classList.toggle("kg-hit-active", index === searchIndex);
+  });
+}
+
+function openInspector(node) {
+  inspectorEl.style.setProperty("--kind-color", KIND_COLORS[node.kind]);
+  const groups = new Map();
+  for (const connection of incident.get(node.id) ?? []) {
+    const other = byId.get(connection.other);
+    if (!other) continue;
+    if (!groups.has(other.kind)) groups.set(other.kind, []);
+    groups.get(other.kind).push({ other, connection });
+  }
+
+  let connectionHtml = "";
+  for (const kind of NODE_KIND_ORDER) {
+    const group = groups.get(kind);
+    if (!group?.length) continue;
+    group.sort((a, b) => b.other.degree - a.other.degree || a.other.label.localeCompare(b.other.label));
+    connectionHtml += `<div class="kg-conn-group"><div class="kg-insp-section-title">${KIND_LABELS[kind]} (${group.length})</div>`;
+    for (const item of group) {
+      connectionHtml += `<button type="button" class="kg-conn" data-id="${item.other.id}" style="--kind-color:${KIND_COLORS[item.other.kind]}">` +
+        `<span class="kg-conn-swatch"></span><span class="kg-conn-body"><span class="kg-conn-label">${escapeHtml(item.other.label)}</span>` +
+        `<span class="kg-conn-rel">${item.connection.dir === "out" ? "to" : "from"} ${escapeHtml(relationLabel(item.connection.label))}</span></span></button>`;
+    }
+    connectionHtml += "</div>";
+  }
+
+  inspectorEl.innerHTML =
+    `<div class="kg-insp-top"><span class="kg-insp-kind"><span class="kg-insp-swatch"></span>${KIND_LABELS[node.kind]}</span>` +
+    `<button type="button" class="kg-insp-close" id="kgInspectorClose" aria-label="Close">x</button></div>` +
+    `<div class="kg-insp-name">${escapeHtml(node.label)}</div>` +
+    `${node.subtitle ? `<div class="kg-insp-subtitle">${escapeHtml(node.subtitle)}</div>` : ""}` +
+    `${node.body ? `<div class="kg-insp-body">${escapeHtml(node.body)}</div>` : ""}` +
+    `${connectionHtml || '<div class="kg-insp-body">No visible connections.</div>'}`;
+  inspectorEl.classList.add("open");
+  document.getElementById("kgInspectorClose").addEventListener("click", clearSelection);
+  inspectorEl.querySelectorAll(".kg-conn").forEach((button) => {
+    button.addEventListener("click", () => selectNode(button.getAttribute("data-id"), 800));
+  });
+}
+
+function relationLabel(label) {
+  return (label || "related").replace(/_/g, " ");
+}
+
+function escapeHtml(value) {
+  return String(value || "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  }[char]));
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  renderFrame(performance.now());
+}
+
+function renderFrame(now) {
+  const delta = Math.min(0.05, Math.max(0.001, (now - lastFrameTime) / 1000));
+  lastFrameTime = now;
+  controls.update();
+  updateLabels();
+  updateFlowParticles(now);
+  updateSelectionRing();
+  if (autoRotate && now > pausedUntil) {
+    rotateCamera(delta);
+  }
+  composer.render(delta);
+  frameCount += 1;
+}
+
+function rotateCamera(delta) {
+  const angle = (Math.PI * 2 / 45) * delta;
+  const offset = camera.position.clone().sub(controls.target);
+  offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+  camera.position.copy(controls.target).add(offset);
+}
+
+function frameOverview(ms) {
+  const distance = 650;
+  const yaw = 0.72;
+  const pitch = 0.38;
+  const target = new THREE.Vector3(graphCenter.x + 10, graphCenter.y + 6, graphCenter.z);
+  const next = new THREE.Vector3(
+    target.x + Math.sin(yaw) * distance * Math.cos(pitch),
+    target.y + Math.sin(pitch) * distance,
+    target.z + Math.cos(yaw) * distance * Math.cos(pitch),
+  );
+  flyCamera(next, target, ms);
+}
+
+function frameNode(id, ms = 900, distance = 88) {
+  const node = byId.get(id);
+  if (!node) return;
+  const target = new THREE.Vector3(node.x, node.y, node.z);
+  const yaw = 0.72;
+  const pitch = 0.3;
+  const next = new THREE.Vector3(
+    node.x + Math.sin(yaw) * distance * Math.cos(pitch),
+    node.y + Math.sin(pitch) * distance + 4,
+    node.z + Math.cos(yaw) * distance * Math.cos(pitch),
+  );
+  flyCamera(next, target, ms);
+}
+
+function flyCamera(position, target, ms = 0) {
+  if (!ms) {
+    camera.position.copy(position);
+    controls.target.copy(target);
+    camera.lookAt(target);
+    controls.update();
+    pausedUntil = performance.now() + 2200;
+    return;
+  }
+  const startPos = camera.position.clone();
+  const startTarget = controls.target.clone();
+  const start = performance.now();
+  pausedUntil = start + ms + 2200;
+  function step(now) {
+    const t = Math.min(1, (now - start) / ms);
+    const eased = easeOutQuart(t);
+    camera.position.lerpVectors(startPos, position, eased);
+    controls.target.lerpVectors(startTarget, target, eased);
+    camera.lookAt(controls.target);
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function onResize() {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+  renderer.setSize(width, height);
+  composer.setSize(width, height);
+}
+
+function pauseSpin() {
+  pausedUntil = performance.now() + 2200;
+}
+
+function computeCenter(nodes) {
+  const min = new THREE.Vector3(Infinity, Infinity, Infinity);
+  const max = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
+  for (const node of nodes) {
+    min.min(new THREE.Vector3(node.x, node.y, node.z));
+    max.max(new THREE.Vector3(node.x, node.y, node.z));
+  }
+  return {
+    x: (min.x + max.x) / 2,
+    y: (min.y + max.y) / 2,
+    z: (min.z + max.z) / 2,
+    radius: Math.max(max.x - min.x, max.y - min.y, max.z - min.z) / 2,
+  };
+}
+
+function emissiveIntensity(node) {
+  if (node.kind === "agent") return node.hub ? 1.08 : 0.94;
+  if (node.hub) return 0.82;
+  if (node.degree >= 4) return 0.74;
+  return 0.68;
+}
+
+function magnitudeScale(node) {
+  if (node.kind === "portco") {
+    const ev = parseEuroMillions(node.subtitle);
+    return clamp(Math.cbrt((ev || 72) / 95), 0.7, 1.8);
+  }
+  if (node.kind === "bottleneck") {
+    const text = `${node.subtitle || ""} ${node.body || ""}`.toLowerCase();
+    if (/\bhigh\b/.test(text)) return 1.42;
+    if (/\blow\b/.test(text)) return 0.86;
+    return 1.08;
+  }
+  if (node.kind === "intervention") return clamp(Math.cbrt((node.val || 9) / 9), 0.78, 1.34);
+  if (node.kind === "playbook") return clamp(Math.cbrt((node.val || 9) / 9), 0.76, 1.28);
+  return clamp(Math.cbrt((node.val || 10) / 11), 0.78, 1.24);
+}
+
+function parseEuroMillions(value) {
+  const match = String(value || "").match(/[€EUR\s]*([0-9]+(?:\.[0-9]+)?)\s*m/i);
+  return match ? Number(match[1]) : null;
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function labelSize(node) {
+  return 5.8 + Math.min(3.0, node.degree * 0.22) + (node.kind === "portco" ? 0.9 : 0);
+}
+
+function labelPriority(node) {
+  let score = node.persistentLabel ? 100 : 0;
+  score += node.degree * 3;
+  if (node.id === "agent:cyan" || node.id === "iv:twilio-aggregation") score += 30;
+  if (node.kind === "portco") score += 20;
+  return score;
+}
+
+function laneX(kind) {
+  const values = { agent: -340, portco: -150, bottleneck: 40, intervention: 210, playbook: 380 };
+  return values[kind] || 0;
+}
+
+function easeOutQuart(t) {
+  return 1 - Math.pow(1 - t, 4);
+}
+</script>
+</body>
+</html>
