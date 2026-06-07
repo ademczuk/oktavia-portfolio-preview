@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Oktavia Portfolio - Knowledge graph (redesign prototype)</title>
-<meta name="description" content="A 2D layered map of the institutional memory: AI colleagues, PortCos, bottlenecks, interventions, and playbooks, and how they connect." />
+<title>Oktavia Portfolio - Knowledge graph (living constellation)</title>
+<meta name="description" content="An interactive 3D constellation of the institutional memory: AI colleagues, PortCos, bottlenecks, interventions, and playbooks, and how they connect." />
 
 <!-- Fonts: Instrument Serif display + IBM Plex Sans body + IBM Plex Mono labels -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -14,49 +14,60 @@
 <!-- Shared preview-site design system (amber accent, dark navy canvas, brand fonts) -->
 <link rel="stylesheet" href="style.css" />
 
-<!-- Graph engine: Cytoscape.js + dagre layered layout, pinned versions -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/dagre/0.8.5/dagre.min.js" defer></script>
-<script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js" defer></script>
+<!-- Graph engine: standalone 3d-force-graph UMD (bundles three.js), pinned. -->
+<!-- three-spritetext is loaded as ESM inside the module script below. -->
+<script src="https://cdn.jsdelivr.net/npm/3d-force-graph@1.80.0/dist/3d-force-graph.min.js"></script>
 
 <style>
   /* ---- Page-local layout ---- */
   html, body { height: 100%; }
-  body { overflow: hidden; background: #02050d; }
+  body { overflow: hidden; background: #0a0e1c; }
 
   .kg-app {
     position: fixed;
     inset: 0;
     z-index: 2;
-    display: grid;
-    grid-template-rows: auto 1fr;
     height: 100%;
   }
 
-  /* ---- Headline strip ---- */
+  /* ---- The 3D stage fills the viewport ---- */
+  #kgGraph {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+  #kgGraph canvas { display: block; outline: none; }
+
+  /* ---- Headline strip (overlay, top) ---- */
   .kg-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    z-index: 10;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.85rem 1.25rem;
-    padding: 0.8rem clamp(0.9rem, 3vw, 1.6rem);
-    border-bottom: 1px solid var(--line-soft);
-    background: oklch(0.10 0.018 260 / 0.78);
+    gap: 0.7rem 1.1rem;
+    padding: 0.7rem clamp(0.8rem, 3vw, 1.5rem);
+    background: oklch(0.10 0.018 260 / 0.62);
     backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--line-soft);
+    pointer-events: none;
   }
+  .kg-bar > * { pointer-events: auto; }
+
   .kg-title {
     display: inline-flex;
     align-items: baseline;
-    gap: 0.6rem;
+    gap: 0.55rem;
     font-family: var(--font-display);
-    font-size: clamp(1.15rem, 0.9rem + 1vw, 1.55rem);
+    font-size: clamp(1.1rem, 0.9rem + 1vw, 1.5rem);
     letter-spacing: 0.01em;
     color: var(--ink);
     white-space: nowrap;
   }
   .kg-title small {
     font-family: var(--font-mono);
-    font-size: 0.6rem;
+    font-size: 0.58rem;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--ink-faint);
@@ -66,24 +77,24 @@
   .kg-counts {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.45rem;
+    gap: 0.4rem;
   }
   .kg-count {
     display: inline-flex;
     align-items: center;
-    gap: 0.45rem;
+    gap: 0.42rem;
     font-family: var(--font-mono);
-    font-size: 0.68rem;
-    letter-spacing: 0.04em;
+    font-size: 0.66rem;
+    letter-spacing: 0.03em;
     color: var(--ink-dim);
-    padding: 0.28rem 0.6rem;
+    padding: 0.26rem 0.58rem;
     border: 1px solid var(--line);
     border-radius: var(--radius-pill);
-    background: oklch(0.16 0.02 260 / 0.55);
+    background: oklch(0.16 0.02 260 / 0.45);
   }
   .kg-count .swatch {
-    width: 16px;
-    height: 11px;
+    width: 15px;
+    height: 10px;
     flex: none;
     border-radius: 3px;
   }
@@ -92,7 +103,7 @@
     font-weight: 500;
   }
 
-  /* ---- Search ---- */
+  /* ---- Search (top-left area of the bar, pushed right via margin) ---- */
   .kg-search {
     margin-left: auto;
     position: relative;
@@ -102,6 +113,7 @@
   }
   .kg-search input {
     width: 100%;
+    box-sizing: border-box;
     font-family: var(--font-mono);
     font-size: 0.78rem;
     color: var(--ink);
@@ -161,21 +173,7 @@
     color: var(--ink-faint);
   }
 
-  /* ---- Stage (graph + inspector) ---- */
-  .kg-stage {
-    position: relative;
-    min-height: 0;
-    overflow: hidden;
-  }
-  #cy {
-    position: absolute;
-    inset: 0;
-    background:
-      radial-gradient(120% 100% at 18% -10%, oklch(0.16 0.03 260 / 0.5), transparent 60%),
-      #02050d;
-  }
-
-  /* ---- Legend (always-on) ---- */
+  /* ---- Legend (always-on, bottom-left) ---- */
   .kg-legend {
     position: absolute;
     left: clamp(0.6rem, 2vw, 1.1rem);
@@ -185,16 +183,16 @@
     flex-direction: column;
     gap: 0.4rem;
     padding: 0.75rem 0.85rem;
-    background: oklch(0.11 0.018 260 / 0.82);
+    background: oklch(0.11 0.018 260 / 0.78);
     border: 1px solid var(--line);
     border-radius: var(--radius);
     backdrop-filter: blur(10px);
-    max-width: 220px;
+    max-width: 230px;
   }
   .kg-legend h4 {
     margin: 0 0 0.15rem;
     font-family: var(--font-mono);
-    font-size: 0.58rem;
+    font-size: 0.56rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--ink-faint);
@@ -207,25 +205,43 @@
     font-size: 0.76rem;
     color: var(--ink-dim);
   }
-  /* Shape glyphs: a small CSS rendition of each node shape */
-  .kg-glyph {
-    width: 18px; height: 14px; flex: none;
-    display: inline-block;
+  .kg-legend .dot {
+    width: 12px; height: 12px; flex: none;
+    border-radius: 50%;
+    box-shadow: 0 0 8px 1px currentColor;
   }
-  .kg-glyph.ellipse { border-radius: 50%; }
-  .kg-glyph.rrect { border-radius: 5px; }
-  .kg-glyph.rect { border-radius: 2px; }
-  .kg-glyph.diamond { transform: rotate(45deg) scale(0.78); border-radius: 3px; }
-  .kg-glyph.hex {
-    clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
-  }
-
   .kg-legend .hint {
-    margin-top: 0.2rem;
+    margin-top: 0.25rem;
     font-size: 0.66rem;
     color: var(--ink-faint);
-    line-height: 1.4;
+    line-height: 1.45;
   }
+
+  /* ---- Controls cluster (bottom-left, under legend) ---- */
+  .kg-controls {
+    position: absolute;
+    left: clamp(0.6rem, 2vw, 1.1rem);
+    bottom: clamp(0.6rem, 2vw, 1.1rem);
+    z-index: 13;
+    display: none; /* shown after legend height is known; we just stack via order below */
+  }
+
+  .kg-reset {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
+    color: var(--ink-dim);
+    background: oklch(0.13 0.018 260 / 0.85);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-pill);
+    padding: 0.42rem 0.8rem;
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+  .kg-reset:hover { border-color: var(--accent-line); color: var(--ink); }
+
+  /* The legend hosts the reset button at its foot so they stack cleanly. */
+  .kg-legend .kg-reset { margin-top: 0.35rem; align-self: flex-start; }
 
   /* ---- Inspector (right side, plain DOM) ---- */
   .kg-inspector {
@@ -239,7 +255,7 @@
     transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
     display: flex;
     flex-direction: column;
-    background: oklch(0.11 0.018 260 / 0.94);
+    background: oklch(0.10 0.018 260 / 0.94);
     border-left: 1px solid var(--line);
     backdrop-filter: blur(16px);
     box-shadow: -28px 0 80px -40px rgba(0,0,0,0.85);
@@ -395,10 +411,11 @@
   @media (min-width: 760px) {
     .kg-app.insp-open .kg-foot { right: calc(min(380px, 88vw) + 1.1rem); }
   }
-  /* On small screens the inspector covers the whole stage, so hide the floating bits behind it */
+  /* On small screens the inspector covers most of the stage, so hide floating bits */
   @media (max-width: 640px) {
     .kg-app.insp-open .kg-legend,
     .kg-app.insp-open .kg-foot { opacity: 0; pointer-events: none; }
+    .kg-counts { display: none; }
   }
 </style>
 </head>
@@ -406,6 +423,9 @@
 <body class="grain">
 
 <div class="kg-app" id="kgApp">
+
+  <!-- 3D stage -->
+  <div id="kgGraph"></div>
 
   <!-- Headline strip: title, live counts, search -->
   <header class="kg-bar">
@@ -427,78 +447,83 @@
     </div>
   </header>
 
-  <!-- Stage -->
-  <div class="kg-stage">
-    <div id="cy"></div>
+  <div class="kg-loading" id="kgLoading">Loading the constellation</div>
 
-    <div class="kg-loading" id="kgLoading">Loading the graph</div>
-
-    <!-- Always-on legend: color plus shape per kind -->
-    <div class="kg-legend" id="kgLegend">
-      <h4>Legend</h4>
-      <!-- rows injected by JS -->
-      <p class="hint">Click any node to see its connections. Click the background to reset.</p>
-    </div>
-
-    <!-- Inspector (plain DOM) -->
-    <aside class="kg-inspector" id="kgInspector" aria-hidden="true">
-      <div class="kg-insp-head">
-        <button class="kg-insp-close" id="kgClose" aria-label="Close inspector">&times;</button>
-        <span class="kg-insp-kind" id="kgInspKind"></span>
-        <div class="kg-insp-name" id="kgInspName"></div>
-        <div class="kg-insp-subtitle" id="kgInspSubtitle"></div>
-      </div>
-      <div class="kg-insp-body" id="kgInspBody"></div>
-    </aside>
-
-    <!-- Honest footer pill -->
-    <div class="kg-foot">Prototype of the redesigned knowledge graph. Demo data.</div>
+  <!-- Always-on legend: color per kind, plus the reset control and a hint -->
+  <div class="kg-legend" id="kgLegend">
+    <h4>Legend</h4>
+    <!-- rows injected by JS -->
+    <p class="hint">Drag to orbit, scroll to zoom. Click a node to fly in and see its connections. Click empty space to reset.</p>
+    <button class="kg-reset" id="kgReset" type="button">Reset view</button>
   </div>
+
+  <!-- Inspector (plain DOM) -->
+  <aside class="kg-inspector" id="kgInspector" aria-hidden="true">
+    <div class="kg-insp-head">
+      <button class="kg-insp-close" id="kgClose" aria-label="Close inspector">&times;</button>
+      <span class="kg-insp-kind" id="kgInspKind"></span>
+      <div class="kg-insp-name" id="kgInspName"></div>
+      <div class="kg-insp-subtitle" id="kgInspSubtitle"></div>
+    </div>
+    <div class="kg-insp-body" id="kgInspBody"></div>
+  </aside>
+
+  <!-- Honest footer pill -->
+  <div class="kg-foot">Prototype, demo data.</div>
 </div>
 
-<script>
+<script type="module">
 /* =============================================================
-   Oktavia Portfolio - knowledge graph redesign prototype
-   2D layered map with Cytoscape.js + dagre.
-   Self-contained: data is inlined, no fetch.
+   Oktavia Portfolio - knowledge graph living constellation
+   Interactive 3D graph with the standalone 3d-force-graph engine.
+   - 3d-force-graph loaded as UMD <script> (bundles three.js)
+   - SpriteText + three loaded as ESM (esm.sh) so they share a peer
+   Self-contained: data inlined, no fetch, no build step.
    ============================================================= */
 
-/* ---- Demo data (inlined) ---- */
+import SpriteText from "https://esm.sh/three-spritetext@1.10.0";
+import * as THREE from "https://esm.sh/three@0.180.0";
+
+/* ---- Demo data (inlined, lifted verbatim from the prior version) ---- */
 const DATA = {"nodes":[{"id":"agent:briar","kind":"agent","label":"Briar","subtitle":"Portfolio Sales Lead","body":"Authorized at every PortCo to read the CRM, pipeline, win/loss notes.","val":12},{"id":"agent:ondine","kind":"agent","label":"Ondine","subtitle":"AI Transformation Architect","body":"Models the AI-native target state for each PortCo. The lever no traditional ops partner can pull.","val":14},{"id":"agent:wren","kind":"agent","label":"Wren","subtitle":"Pricing Analyst","body":"Continuous pricing intelligence. Speaks in elasticity, designs tests.","val":11},{"id":"agent:cyan","kind":"agent","label":"Cyan","subtitle":"Procurement Aggregator","body":"Cross-portfolio procurement. Forecasted EUR 240k/yr savings on coordinated Twilio renegotiation.","val":11},{"id":"agent:marigold","kind":"agent","label":"Marigold","subtitle":"Org Design Operator","val":10},{"id":"agent:indigo","kind":"agent","label":"Indigo","subtitle":"Integration PMO","val":10},{"id":"agent:sage","kind":"agent","label":"Sage","subtitle":"Benchmarking Steward","body":"Every KPI gets contextualized as a percentile against the portfolio's same-sector subset.","val":12},{"id":"portco:halcyon","kind":"portco","label":"Halcyon Logistics","subtitle":"value_creation · €220m EV","body":"Logistics tech. AI Transformation Architect target-state model ready; dispatch is the first rebuild target.","val":16},{"id":"portco:apex","kind":"portco","label":"ApexHealth","subtitle":"value_creation · €95m EV","body":"Healthtech SaaS. Briar's ICP-tightening test in flight; CRO Karen approved.","val":13},{"id":"portco:verdant","kind":"portco","label":"Verdant SaaS","subtitle":"value_creation · €48m EV","body":"Vertical SaaS. Sage flagged 31st-percentile gross margin; cost_reduction playbook v2 recommended.","val":14},{"id":"portco:solstice","kind":"portco","label":"Solstice Energy","subtitle":"onboarding · €140m EV","val":12},{"id":"portco:tern","kind":"portco","label":"Tern Marketplace","subtitle":"harvest · €72m EV","val":11},{"id":"portco:cobalt","kind":"portco","label":"Cobalt Cyber","subtitle":"value_creation · €28m EV","val":10},{"id":"pb:cost-reduction-v2","kind":"playbook","label":"cost_reduction v2","body":"Average uplift 9pp gross margin within 18 months across 3 portfolio applications.","val":11},{"id":"pb:icp-tightening","kind":"playbook","label":"icp_tightening","body":"Forecast 18% close-rate lift, 12% deal-count drop, net 5% revenue uplift.","val":9},{"id":"pb:ai-native-rebuild-dispatch","kind":"playbook","label":"ai_native_rebuild · dispatch","body":"Sub-minute routing replaces manual dispatch. Owned by Ondine.","val":10},{"id":"pb:procurement-aggregation","kind":"playbook","label":"procurement_aggregation","val":9},{"id":"pb:org-redesign-cs","kind":"playbook","label":"org_redesign · CS","val":8},{"id":"iv:apex-icp-test","kind":"intervention","label":"ApexHealth · ICP test","subtitle":"in_flight","body":"Briar's tightening proposal, 10% cohort A/B. First results due Friday.","val":10},{"id":"iv:halcyon-dispatch-rebuild","kind":"intervention","label":"Halcyon · dispatch rebuild","subtitle":"proposed","body":"Quarter-by-quarter migration plan. PortCo CEO requested variant B (comms first).","val":11},{"id":"iv:twilio-aggregation","kind":"intervention","label":"Cross-portfolio · Twilio re-neg","subtitle":"in_flight","body":"Six PortCos coordinated. Forecast EUR 240k/yr savings. Contractor briefed.","val":9},{"id":"iv:verdant-cost-review","kind":"intervention","label":"Verdant · cost review","subtitle":"awaiting_portco","val":8},{"id":"bn:halcyon-manual-dispatch","kind":"bottleneck","label":"Manual dispatch","subtitle":"high · Halcyon","body":"14 ops staff, no real-time tracking. Gates driver utilization, ETA accuracy, ops headcount.","val":10},{"id":"bn:apex-broad-icp","kind":"bottleneck","label":"ICP too broad","subtitle":"mid · ApexHealth","val":8},{"id":"bn:verdant-gross-margin","kind":"bottleneck","label":"31st-pct gross margin","subtitle":"mid · Verdant","val":9}],"links":[{"source":"agent:ondine","target":"portco:halcyon","label":"authorized","weight":3},{"source":"agent:ondine","target":"portco:apex","label":"authorized","weight":2},{"source":"agent:ondine","target":"portco:solstice","label":"authorized","weight":2},{"source":"agent:ondine","target":"portco:verdant","label":"authorized","weight":2},{"source":"agent:briar","target":"portco:apex","label":"authorized","weight":3},{"source":"agent:briar","target":"portco:halcyon","label":"authorized","weight":2},{"source":"agent:briar","target":"portco:tern","label":"authorized","weight":1},{"source":"agent:wren","target":"portco:verdant","label":"authorized","weight":2},{"source":"agent:wren","target":"portco:cobalt","label":"authorized","weight":1},{"source":"agent:cyan","target":"portco:halcyon","label":"authorized","weight":1},{"source":"agent:cyan","target":"portco:apex","label":"authorized","weight":1},{"source":"agent:cyan","target":"portco:verdant","label":"authorized","weight":1},{"source":"agent:cyan","target":"portco:tern","label":"authorized","weight":1},{"source":"agent:cyan","target":"portco:cobalt","label":"authorized","weight":1},{"source":"agent:cyan","target":"portco:solstice","label":"authorized","weight":1},{"source":"agent:marigold","target":"portco:halcyon","label":"authorized","weight":2},{"source":"agent:marigold","target":"portco:verdant","label":"authorized","weight":1},{"source":"agent:indigo","target":"portco:verdant","label":"authorized · integration","weight":2},{"source":"agent:sage","target":"portco:verdant","label":"benchmarked","weight":2},{"source":"agent:sage","target":"portco:halcyon","label":"benchmarked","weight":1},{"source":"portco:halcyon","target":"bn:halcyon-manual-dispatch","weight":2},{"source":"portco:apex","target":"bn:apex-broad-icp","weight":2},{"source":"portco:verdant","target":"bn:verdant-gross-margin","weight":2},{"source":"bn:halcyon-manual-dispatch","target":"iv:halcyon-dispatch-rebuild","label":"triggered","weight":2},{"source":"bn:apex-broad-icp","target":"iv:apex-icp-test","label":"triggered","weight":2},{"source":"bn:verdant-gross-margin","target":"iv:verdant-cost-review","label":"triggered","weight":2},{"source":"iv:halcyon-dispatch-rebuild","target":"pb:ai-native-rebuild-dispatch","label":"uses","weight":2},{"source":"iv:apex-icp-test","target":"pb:icp-tightening","label":"uses","weight":2},{"source":"iv:twilio-aggregation","target":"pb:procurement-aggregation","label":"uses","weight":2},{"source":"iv:verdant-cost-review","target":"pb:cost-reduction-v2","label":"uses","weight":2},{"source":"pb:cost-reduction-v2","target":"portco:halcyon","label":"proven","weight":1},{"source":"pb:cost-reduction-v2","target":"portco:cobalt","label":"proven","weight":1},{"source":"pb:cost-reduction-v2","target":"portco:tern","label":"proven (exited)","weight":1},{"source":"pb:icp-tightening","target":"portco:tern","label":"proven","weight":1},{"source":"pb:procurement-aggregation","target":"portco:halcyon","label":"applied","weight":1},{"source":"pb:procurement-aggregation","target":"portco:apex","label":"applied","weight":1},{"source":"pb:procurement-aggregation","target":"portco:verdant","label":"applied","weight":1},{"source":"pb:procurement-aggregation","target":"portco:tern","label":"applied","weight":1},{"source":"pb:procurement-aggregation","target":"portco:cobalt","label":"applied","weight":1},{"source":"pb:procurement-aggregation","target":"portco:solstice","label":"applied","weight":1},{"source":"iv:twilio-aggregation","target":"portco:halcyon"},{"source":"iv:twilio-aggregation","target":"portco:apex"},{"source":"iv:twilio-aggregation","target":"portco:verdant"},{"source":"iv:twilio-aggregation","target":"portco:tern"},{"source":"iv:twilio-aggregation","target":"portco:cobalt"},{"source":"iv:twilio-aggregation","target":"portco:solstice"},{"source":"agent:cyan","target":"iv:twilio-aggregation","label":"owns","weight":2}],"kind_colors":{"agent":"#f4b942","portco":"#8b7cf7","playbook":"#5cd9b3","intervention":"#7cc4f7","bottleneck":"#f97e63"},"kind_labels":{"agent":"AI colleague","portco":"PortCo","playbook":"Playbook","intervention":"Intervention","bottleneck":"Bottleneck"}};
 
-/* ---- Per-kind presentation rules ---- */
-// Lane order, left to right: agent, portco, bottleneck, intervention, playbook.
+const KIND_COLORS = DATA.kind_colors;
+const KIND_LABELS = DATA.kind_labels;
+
+/* Lane / display order for the legend and counts. */
 const KIND_ORDER = ["agent", "portco", "bottleneck", "intervention", "playbook"];
 
-// Cytoscape node-shape per kind. Maps to the legend glyph class too.
-const KIND_SHAPE = {
-  agent: "ellipse",
-  portco: "round-rectangle",
-  bottleneck: "diamond",
-  intervention: "round-hexagon",
-  playbook: "rectangle"
+/* A node is a bright cell body if it is an agent OR its degree is high. */
+const SOMA_DEGREE = 4;
+
+/* Per-kind label typography. Agents get a serif and larger text. */
+const KIND_LABEL_FONT = {
+  agent: "Instrument Serif, serif",
+  portco: "IBM Plex Sans, sans-serif",
+  playbook: "IBM Plex Sans, sans-serif",
+  intervention: "IBM Plex Sans, sans-serif",
+  bottleneck: "IBM Plex Sans, sans-serif"
 };
-const LEGEND_GLYPH = {
-  agent: "ellipse",
-  portco: "rrect",
-  bottleneck: "diamond",
-  intervention: "hex",
-  playbook: "rect"
+const KIND_LABEL_HEIGHT = {
+  agent: 5,
+  portco: 3.6,
+  playbook: 3.4,
+  intervention: 3.4,
+  bottleneck: 3.4
 };
 
-const COLORS = DATA.kind_colors;
-const LABELS = DATA.kind_labels;
-
-// Quick lookup of a node record by id, used by the inspector.
+/* ---- Lookup tables ---- */
 const NODE_BY_ID = {};
 DATA.nodes.forEach(function (n) { NODE_BY_ID[n.id] = n; });
 
-/* ---- Node sizing: cube-root of val, clamped so small nodes stay readable ---- */
-function nodeSize(val) {
-  const v = (typeof val === "number" && val > 0) ? val : 1;
-  const base = Math.cbrt(v); // roughly 2.0 to 2.5 across this data set
-  const px = base * 26;      // scale up to pixels
-  return Math.max(46, Math.min(96, Math.round(px)));
+/* ---- Small HTML escaper for inspector copy ---- */
+function escapeHtml(s) {
+  if (s === undefined || s === null) return "";
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 /* ---- Build the live count strip ---- */
@@ -514,14 +539,14 @@ function nodeSize(val) {
     const el = document.createElement("span");
     el.className = "kg-count";
     el.innerHTML =
-      '<span class="swatch" style="background:' + COLORS[k] + '"></span>' +
+      '<span class="swatch" style="background:' + KIND_COLORS[k] + '"></span>' +
       '<span class="num">' + counts[k] + '</span> ' +
-      escapeHtml(LABELS[k]) + (counts[k] === 1 ? "" : "s");
+      escapeHtml(KIND_LABELS[k]) + (counts[k] === 1 ? "" : "s");
     host.appendChild(el);
   });
 })();
 
-/* ---- Build the always-on legend (color plus shape) ---- */
+/* ---- Build the always-on legend (glowing dot plus kind) ---- */
 (function renderLegend() {
   const host = document.getElementById("kgLegend");
   const hint = host.querySelector(".hint");
@@ -529,346 +554,457 @@ function nodeSize(val) {
     const row = document.createElement("div");
     row.className = "row";
     row.innerHTML =
-      '<span class="kg-glyph ' + LEGEND_GLYPH[k] + '" style="background:' + COLORS[k] + '"></span>' +
-      escapeHtml(LABELS[k]);
+      '<span class="dot" style="background:' + KIND_COLORS[k] + ';color:' + KIND_COLORS[k] + '"></span>' +
+      escapeHtml(KIND_LABELS[k]);
     host.insertBefore(row, hint);
   });
 })();
 
-/* ---- Small HTML escaper for inspector copy ---- */
-function escapeHtml(s) {
-  if (s === undefined || s === null) return "";
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-/* ---- Boot Cytoscape once the CDN scripts have loaded ---- */
-window.addEventListener("load", function () {
-  if (typeof cytoscape === "undefined") {
-    document.getElementById("kgLoading").textContent = "Graph engine did not load. Check your connection.";
-    return;
-  }
-  // Register the dagre layout extension.
-  if (typeof cytoscapeDagre !== "undefined") {
-    cytoscape.use(cytoscapeDagre);
-  }
-  buildGraph();
+/* =============================================================
+   Build the graph data the engine consumes.
+   - clone nodes/links so the engine can mutate (link.source/target
+     become object refs after graphData)
+   - attach a per-node color and val for the accessors
+   ============================================================= */
+const gNodes = DATA.nodes.map(function (n) {
+  return {
+    id: n.id,
+    kind: n.kind,
+    name: n.label,
+    subtitle: n.subtitle || "",
+    body: n.body || "",
+    val: (typeof n.val === "number" && n.val > 0) ? n.val : 1,
+    color: KIND_COLORS[n.kind] || "#9aa"
+  };
+});
+const gLinks = DATA.links.map(function (l) {
+  return { source: l.source, target: l.target, name: l.label || "", weight: l.weight || 1 };
 });
 
-let cy = null;
-let selectedId = null;
+const NODE_COUNT = gNodes.length;
+const LINK_COUNT = gLinks.length;
 
-function buildGraph() {
-  // ---- Translate the data into Cytoscape elements ----
-  const elements = [];
-
-  DATA.nodes.forEach(function (n) {
-    elements.push({
-      data: {
-        id: n.id,
-        label: n.label,
-        kind: n.kind,
-        color: COLORS[n.kind] || "#9aa",
-        shape: KIND_SHAPE[n.kind] || "ellipse",
-        size: nodeSize(n.val),
-        rank: KIND_ORDER.indexOf(n.kind)
-      }
-    });
-  });
-
-  DATA.links.forEach(function (l, i) {
-    elements.push({
-      data: {
-        id: "e" + i,
-        source: l.source,
-        target: l.target,
-        label: l.label || ""
-      }
-    });
-  });
-
-  // ---- Stylesheet ----
-  const style = [
-    {
-      selector: "node",
-      style: {
-        "background-color": "data(color)",
-        "background-opacity": 0.92,
-        "shape": "data(shape)",
-        "width": "data(size)",
-        "height": "data(size)",
-        "label": "data(label)",
-        "color": "#eef1f6",
-        "font-family": "IBM Plex Sans, sans-serif",
-        "font-size": 13,
-        "font-weight": 500,
-        "text-valign": "bottom",
-        "text-halign": "center",
-        "text-margin-y": 5,
-        "text-wrap": "wrap",
-        "text-max-width": 132,
-        "text-outline-width": 3,
-        "text-outline-color": "#02050d",
-        "text-outline-opacity": 0.9,
-        "border-width": 2,
-        "border-color": "#02050d",
-        "border-opacity": 0.55,
-        "overlay-opacity": 0,
-        "transition-property": "opacity, border-width, border-color, background-opacity",
-        "transition-duration": "180ms"
-      }
-    },
-    {
-      // PortCos run a touch taller as round-rectangles so the longer
-      // names sit better; keep them readable.
-      selector: 'node[kind = "playbook"]',
-      style: { "width": "mapData(size, 46, 96, 56, 110)" }
-    },
-    {
-      selector: "edge",
-      style: {
-        "width": 1.6,
-        "line-color": "#3a4256",
-        "line-opacity": 0.55,
-        "curve-style": "bezier",
-        "target-arrow-shape": "triangle",
-        "target-arrow-color": "#4a5468",
-        "arrow-scale": 0.85,
-        "label": "",
-        "font-family": "IBM Plex Mono, monospace",
-        "font-size": 9,
-        "color": "#c8cedd",
-        "text-background-color": "#02050d",
-        "text-background-opacity": 0.85,
-        "text-background-padding": 3,
-        "text-rotation": "autorotate",
-        "transition-property": "line-color, line-opacity, width, target-arrow-color",
-        "transition-duration": "180ms"
-      }
-    },
-    // Show the relationship label on edge hover.
-    {
-      selector: "edge.lbl",
-      style: {
-        "label": "data(label)",
-        "line-color": "#7c8aa8",
-        "line-opacity": 0.95,
-        "target-arrow-color": "#7c8aa8",
-        "width": 2.4,
-        "z-index": 30
-      }
-    },
-    // Selection highlight: the picked node.
-    {
-      selector: "node.sel",
-      style: {
-        "border-width": 4,
-        "border-color": "#f6c453",
-        "border-opacity": 1,
-        "background-opacity": 1
-      }
-    },
-    // 1-hop neighbors stay bright.
-    {
-      selector: "node.neighbor",
-      style: { "background-opacity": 1 }
-    },
-    // Active edges in the neighborhood, with their labels on.
-    {
-      selector: "edge.active",
-      style: {
-        "label": "data(label)",
-        "line-color": "#f6c453",
-        "line-opacity": 0.95,
-        "target-arrow-color": "#f6c453",
-        "width": 2.6,
-        "z-index": 20
-      }
-    },
-    // Dimmed elements when something is selected.
-    {
-      selector: ".faded",
-      style: { "opacity": 0.12 }
-    }
-  ];
-
-  // ---- Layout: layered left to right, ranked by kind ----
-  const layout = {
-    name: "dagre",
-    rankDir: "LR",
-    align: "UL",
-    nodeSep: 26,
-    edgeSep: 12,
-    rankSep: 130,
-    ranker: "network-simplex",
-    fit: true,
-    padding: 60,
-    // Force the five lanes in our chosen order by rank.
-    nodeDimensionsIncludeLabels: false
-  };
-
-  cy = cytoscape({
-    container: document.getElementById("cy"),
-    elements: elements,
-    style: style,
-    layout: layout,
-    minZoom: 0.25,
-    maxZoom: 2.6,
-    wheelSensitivity: 0.25,
-    boxSelectionEnabled: false,
-    autoungrabify: false
-  });
-
-  // dagre ranks by graph topology. We want strict lanes by kind, so
-  // after layout we snap each node's x to its kind lane while keeping
-  // the y dagre computed (which already untangles the within-lane order).
-  cy.ready(function () {
-    snapToLanes();
-    cy.fit(undefined, 50);
-    const loader = document.getElementById("kgLoading");
-    loader.classList.add("is-hidden");
-    setTimeout(function () { loader.style.display = "none"; }, 450);
-  });
-
-  // ---- Interactions ----
-  cy.on("tap", "node", function (evt) {
-    selectNode(evt.target.id());
-  });
-
-  cy.on("mouseover", "edge", function (evt) {
-    if (selectedId) return; // selection already shows labels
-    if (evt.target.data("label")) evt.target.addClass("lbl");
-  });
-  cy.on("mouseout", "edge", function (evt) {
-    evt.target.removeClass("lbl");
-  });
-
-  // Background tap deselects.
-  cy.on("tap", function (evt) {
-    if (evt.target === cy) deselect();
-  });
-
-  wireSearch();
-  wireInspectorClose();
-
-  // Expose the instance under a namespaced handle for debugging.
-  // Note: window.cy would collide with the <div id="cy"> element, which
-  // browsers auto-expose as a global, so use a distinct name.
-  window.__kg = { cy: cy, select: selectNode, deselect: deselect };
+/* ---- Degree map (from the raw link ids, before the engine rewrites them) ---- */
+const degree = {};
+gNodes.forEach(function (n) { degree[n.id] = 0; });
+DATA.links.forEach(function (l) {
+  if (degree[l.source] !== undefined) degree[l.source] += 1;
+  if (degree[l.target] !== undefined) degree[l.target] += 1;
+});
+function isSoma(node) {
+  return node.kind === "agent" || (degree[node.id] || 0) >= SOMA_DEGREE;
 }
 
-/* ---- Snap nodes into five vertical lanes by kind ---- */
-function snapToLanes() {
-  // Collect dagre-computed extents.
-  const ext = cy.elements().boundingBox();
-  const laneCount = KIND_ORDER.length;
-  const usableW = Math.max(ext.w, 900);
-  const left = ext.x1;
-  const step = usableW / (laneCount - 1 || 1);
+/* ---- Neighbor adjacency (by id) for hover and highlight ---- */
+const neighborIds = {};
+const linkPairKey = {};   // "src|tgt" -> true, undirected membership test
+gNodes.forEach(function (n) { neighborIds[n.id] = new Set(); });
+DATA.links.forEach(function (l) {
+  if (neighborIds[l.source]) neighborIds[l.source].add(l.target);
+  if (neighborIds[l.target]) neighborIds[l.target].add(l.source);
+  linkPairKey[l.source + "|" + l.target] = true;
+});
 
-  // For each lane, keep the relative y dagre gave, just reposition x.
-  KIND_ORDER.forEach(function (kind, idx) {
-    const laneX = left + step * idx;
-    const laneNodes = cy.nodes('[kind = "' + kind + '"]');
-    // Spread nodes vertically within the lane, preserving dagre order.
-    const sorted = laneNodes.sort(function (a, b) {
-      return a.position("y") - b.position("y");
-    });
-    const n = sorted.length;
-    const laneH = Math.max(ext.h, 520);
-    const top = ext.y1;
-    const gap = n > 1 ? laneH / (n - 1) : 0;
-    sorted.forEach(function (node, i) {
-      const y = n > 1 ? top + gap * i : top + laneH / 2;
-      node.position({ x: laneX, y: y });
-    });
-  });
+/* =============================================================
+   Glow textures: a core gradient and a wide soft halo gradient.
+   Cached per color so we build each canvas once.
+   ============================================================= */
+const coreTexCache = new Map();
+const haloTexCache = new Map();
+
+function hexToRgb(hex) {
+  let h = String(hex).replace("#", "");
+  if (h.length === 3) h = h.split("").map(function (c) { return c + c; }).join("");
+  const n = parseInt(h, 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+function rgba(hex, a) {
+  const c = hexToRgb(hex);
+  return "rgba(" + c.r + "," + c.g + "," + c.b + "," + a + ")";
 }
 
-/* ---- Selection: highlight node + 1-hop, dim rest, open inspector ---- */
-function selectNode(id, doFit) {
-  const node = cy.getElementById(id);
-  if (!node || node.empty()) return;
-  selectedId = id;
+function makeCoreTexture(hex) {
+  if (coreTexCache.has(hex)) return coreTexCache.get(hex);
+  const size = 128;
+  const c = document.createElement("canvas"); c.width = c.height = size;
+  const ctx = c.getContext("2d");
+  const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0.00, "rgba(255,250,240,1.00)");
+  g.addColorStop(0.14, "rgba(255,250,240,0.95)");
+  g.addColorStop(0.34, rgba(hex, 0.72));
+  g.addColorStop(0.68, rgba(hex, 0.16));
+  g.addColorStop(1.00, rgba(hex, 0.00));
+  ctx.fillStyle = g; ctx.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  coreTexCache.set(hex, tex);
+  return tex;
+}
+function makeHaloTexture(hex) {
+  if (haloTexCache.has(hex)) return haloTexCache.get(hex);
+  const size = 128;
+  const c = document.createElement("canvas"); c.width = c.height = size;
+  const ctx = c.getContext("2d");
+  const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
+  g.addColorStop(0.00, "rgba(255,250,240,0.16)");
+  g.addColorStop(0.22, rgba(hex, 0.36));
+  g.addColorStop(0.58, rgba(hex, 0.14));
+  g.addColorStop(1.00, rgba(hex, 0.00));
+  ctx.fillStyle = g; ctx.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  haloTexCache.set(hex, tex);
+  return tex;
+}
 
-  cy.elements().removeClass("sel neighbor active faded lbl");
+/* A small soft round texture used for the edge photons. */
+let photonTex = null;
+function makePhotonTexture() {
+  if (photonTex) return photonTex;
+  const size = 64;
+  const c = document.createElement("canvas"); c.width = c.height = size;
+  const ctx = c.getContext("2d");
+  const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0.0, "rgba(255,245,220,1.0)");
+  g.addColorStop(0.4, "rgba(255,225,170,0.55)");
+  g.addColorStop(1.0, "rgba(255,225,170,0.0)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, size, size);
+  photonTex = new THREE.CanvasTexture(c);
+  photonTex.colorSpace = THREE.SRGBColorSpace;
+  return photonTex;
+}
 
-  const neighborhood = node.closedNeighborhood();
-  const connectedEdges = node.connectedEdges();
+/* Node visual radius. Cube-root of val, agents floored so they stay bright bodies. */
+function nodeRadius(node) {
+  let r = Math.cbrt(node.val) * 3.35;
+  if (node.kind === "agent" && r < 5.8) r = 5.8;
+  return r;
+}
 
-  // Dim everything, then re-light the neighborhood.
-  cy.elements().addClass("faded");
-  neighborhood.removeClass("faded");
-  connectedEdges.removeClass("faded");
+/* =============================================================
+   nodeThreeObject: a Group of
+     1) invisible raycast proxy sphere (the only thing the cursor hits)
+     2) additive core glow sprite
+     3) additive wide halo sprite
+     4) an additive accent ring for agents
+     5) a persistent SpriteText label, always visible
+   ============================================================= */
+function buildNodeObject(node) {
+  const group = new THREE.Group();
+  group.userData.kgNode = node;
 
-  node.addClass("sel");
-  node.neighborhood("node").addClass("neighbor");
-  connectedEdges.addClass("active");
+  const radius = nodeRadius(node);
+  const soma = isSoma(node);
+  const hex = node.color;
 
-  if (doFit !== false) {
-    cy.animate({ fit: { eles: neighborhood, padding: 90 }, duration: 380, easing: "ease-in-out" });
+  // 1) raycast proxy (invisible, generous hit area)
+  const proxyGeo = new THREE.SphereGeometry(radius, 16, 16);
+  const proxyMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
+  const proxy = new THREE.Mesh(proxyGeo, proxyMat);
+  group.add(proxy);
+
+  // 2) core glow sprite
+  const coreMat = new THREE.SpriteMaterial({
+    map: makeCoreTexture(hex),
+    color: 0xffffff,
+    blending: THREE.AdditiveBlending,
+    transparent: true,
+    depthWrite: false
+  });
+  const core = new THREE.Sprite(coreMat);
+  const coreScale = radius * (soma ? 1.6 : 1.1);
+  core.scale.set(coreScale, coreScale, 1);
+  coreMat.opacity = soma ? 0.98 : 0.88;
+  core.userData.baseOpacity = coreMat.opacity;
+  core.userData.baseScale = coreScale;
+  core.userData.isSoma = soma;
+  group.add(core);
+  group.userData.core = core;
+
+  // 3) halo glow sprite (wide and faint = the bloom)
+  const haloMat = new THREE.SpriteMaterial({
+    map: makeHaloTexture(hex),
+    color: 0xffffff,
+    blending: THREE.AdditiveBlending,
+    transparent: true,
+    depthWrite: false
+  });
+  const halo = new THREE.Sprite(haloMat);
+  const haloScale = radius * (soma ? 4.0 : 3.0);
+  halo.scale.set(haloScale, haloScale, 1);
+  haloMat.opacity = soma ? 0.72 : 0.56;
+  group.add(halo);
+  group.userData.halo = halo;
+  group.userData.haloBaseOpacity = haloMat.opacity;
+
+  // 4) accent ring for agents (the clearest "special node" signal)
+  if (node.kind === "agent") {
+    const ringOuter = coreScale * 0.62;
+    const ringGeo = new THREE.RingGeometry(ringOuter * 0.78, ringOuter, 48);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(hex),
+      blending: THREE.AdditiveBlending,
+      transparent: true,
+      opacity: 0.72,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    // Sprites always face the camera; the ring is flat, so let the engine
+    // orient it loosely. It reads as a halo ring from most angles.
+    group.add(ring);
   }
 
-  openInspector(id);
+  // 5) persistent label (always on)
+  const label = new SpriteText(node.name);
+  label.color = "#f4f2ea";
+  label.backgroundColor = "rgba(13,17,33,0.78)";
+  label.padding = 4;
+  label.borderRadius = 4;
+  label.fontWeight = "500";
+  label.fontFace = KIND_LABEL_FONT[node.kind] || "IBM Plex Sans, sans-serif";
+  label.textHeight = KIND_LABEL_HEIGHT[node.kind] || 3.4;
+  label.material.depthWrite = false;
+  label.visible = true;
+  label.position.set(0, haloScale * 0.42 + 3.5, 0);
+  group.add(label);
+
+  return group;
+}
+
+/* =============================================================
+   Edge styling tiers. Returns color/opacity/photon params per link
+   based on hover and selection state. Priority order matters.
+   ============================================================= */
+function linkTouchesHighlight(link) {
+  if (!highlightSet.size) return false;
+  const s = link.source.id || link.source;
+  const t = link.target.id || link.target;
+  return highlightSet.has(s) && highlightSet.has(t);
+}
+function linkTouchesNode(link, nodeId) {
+  if (!nodeId) return false;
+  const s = link.source.id || link.source;
+  const t = link.target.id || link.target;
+  return s === nodeId || t === nodeId;
+}
+function linkSomaTouch(link) {
+  const s = link.source.id || link.source;
+  const t = link.target.id || link.target;
+  const ns = NODE_BY_ID[s], nt = NODE_BY_ID[t];
+  return (ns && (ns.kind === "agent" || (degree[s] || 0) >= SOMA_DEGREE)) ||
+         (nt && (nt.kind === "agent" || (degree[t] || 0) >= SOMA_DEGREE));
+}
+
+/* Deterministic hash so the ~33% photon subset and speeds are stable. */
+function hashStr(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; }
+  return h >>> 0;
+}
+function linkHash(link) {
+  const s = link.source.id || link.source;
+  const t = link.target.id || link.target;
+  return hashStr(s + ">" + t);
+}
+function plainPhotonOn(link) {
+  // about a third of plain edges carry a photon, plus all soma-touching edges
+  if (linkSomaTouch(link)) return true;
+  return (linkHash(link) % 3) === 0;
+}
+
+/* ---- Engine instance ---- */
+const elGraph = document.getElementById("kgGraph");
+const Graph = new ForceGraph3D(elGraph, { controlType: "orbit", rendererConfig: { antialias: true, alpha: true, powerPreference: "high-performance" } });
+
+let hoverNodeId = null;
+let selectedId = null;
+let highlightSet = new Set();    // ids in the currently highlighted neighborhood
+
+Graph
+  .backgroundColor("#0a0e1c")
+  .graphData({ nodes: gNodes, links: gLinks })
+  .nodeRelSize(4)
+  .nodeVal(function (n) { return n.val; })
+  .nodeLabel(function (n) { return ""; })  // we use persistent SpriteText, not the HTML tooltip
+  .nodeThreeObject(buildNodeObject)
+  .nodeThreeObjectExtend(false)            // replace the default sphere (we draw our own proxy)
+  .linkLabel(function (l) { return l.name || ""; })
+  .linkColor(linkColor)
+  .linkOpacity(0.34)
+  .linkWidth(linkWidth)
+  .linkDirectionalParticles(linkParticles)
+  .linkDirectionalParticleColor(linkParticleColor)
+  .linkDirectionalParticleWidth(1.6)
+  .linkDirectionalParticleSpeed(0.006)
+  .onNodeClick(onNodeClick)
+  .onNodeHover(onNodeHover)
+  .onBackgroundClick(deselect)
+  .d3VelocityDecay(0.32)
+  .d3AlphaDecay(0.02)
+  .warmupTicks(60)
+  .cooldownTicks(400);
+
+/* ---- Link accessor functions (state-aware) ---- */
+function linkColor(link) {
+  const hovered = hoverNodeId && linkTouchesNode(link, hoverNodeId);
+  if (hovered || linkTouchesHighlight(link)) return "#ffd578";      // focused: gold
+  if (highlightSet.size && !linkTouchesHighlight(link)) return rgba("#3a4a66", 0.10); // dim others
+  if (linkSomaTouch(link)) return rgba("#f4b942", 0.42);            // resting soma edge: amber
+  return rgba("#d8cab4", 0.28);                                     // resting plain: muted
+}
+function linkWidth(link) {
+  const hovered = hoverNodeId && linkTouchesNode(link, hoverNodeId);
+  if (hovered || linkTouchesHighlight(link)) return 1.4;
+  return 0.5;
+}
+function linkParticles(link) {
+  const hovered = hoverNodeId && linkTouchesNode(link, hoverNodeId);
+  if (hovered || linkTouchesHighlight(link)) return 4;
+  if (highlightSet.size && !linkTouchesHighlight(link)) return 0;   // mute the rest
+  return plainPhotonOn(link) ? 2 : 0;
+}
+function linkParticleColor(link) {
+  const hovered = hoverNodeId && linkTouchesNode(link, hoverNodeId);
+  if (hovered || linkTouchesHighlight(link)) return "#fff2cc";
+  return "#ffd9a0";
+}
+
+/* =============================================================
+   Hover: brighten the 1-hop neighborhood, dim the rest. Re-apply
+   accessors by calling them again so the engine restyles links.
+   ============================================================= */
+function onNodeHover(node) {
+  const id = node ? node.id : null;
+  if (id === hoverNodeId) return;
+  hoverNodeId = id;
+  document.body.style.cursor = node ? "pointer" : "";
+  refreshLinkStyles();
+  applyNodeEmphasis();
+}
+
+/* Recompute the visual emphasis on every node group based on hover/selection. */
+function applyNodeEmphasis() {
+  // Which ids are "lit": selection neighborhood wins; otherwise hover neighborhood.
+  let lit = null;
+  if (highlightSet.size) lit = highlightSet;
+  else if (hoverNodeId) {
+    lit = new Set([hoverNodeId]);
+    neighborIds[hoverNodeId].forEach(function (x) { lit.add(x); });
+  }
+
+  Graph.graphData().nodes.forEach(function (n) {
+    const grp = n.__threeObj;
+    if (!grp) return;
+    const core = grp.userData.core;
+    const halo = grp.userData.halo;
+    if (!core || !halo) return;
+
+    let mul = 1.0;          // brightness multiplier
+    if (lit) mul = lit.has(n.id) ? 1.0 : 0.22;
+
+    core.material.opacity = core.userData.baseOpacity * mul;
+    halo.material.opacity = grp.userData.haloBaseOpacity * mul;
+  });
+}
+
+/* Force the link accessors to re-evaluate by re-setting them. */
+function refreshLinkStyles() {
+  Graph
+    .linkColor(linkColor)
+    .linkWidth(linkWidth)
+    .linkDirectionalParticles(linkParticles)
+    .linkDirectionalParticleColor(linkParticleColor);
+}
+
+/* =============================================================
+   Click: fly the camera to frame the node, build the highlight set
+   (node + 1-hop), open the inspector.
+   ============================================================= */
+function onNodeClick(node) {
+  if (!node) return;
+  flyTo(node);
+  selectedId = node.id;
+  highlightSet = new Set([node.id]);
+  neighborIds[node.id].forEach(function (x) { highlightSet.add(x); });
+  refreshLinkStyles();
+  applyNodeEmphasis();
+  openInspector(node.id);
+  // pause auto-rotate while focused
+  pauseAutoRotate();
+}
+
+function flyTo(node) {
+  const dist = 120;
+  const d = Math.hypot(node.x || 0, node.y || 0, node.z || 0) || 1;
+  const r = 1 + dist / d;
+  Graph.cameraPosition(
+    { x: (node.x || 0) * r, y: (node.y || 0) * r, z: (node.z || 0) * r },
+    { x: node.x || 0, y: node.y || 0, z: node.z || 0 },
+    1400
+  );
 }
 
 function deselect() {
   selectedId = null;
-  cy.elements().removeClass("sel neighbor active faded lbl");
+  highlightSet = new Set();
+  refreshLinkStyles();
+  applyNodeEmphasis();
   closeInspector();
-  cy.animate({ fit: { eles: cy.elements(), padding: 50 }, duration: 360, easing: "ease-in-out" });
+  resumeAutoRotateSoon();
 }
 
-/* ---- Inspector (plain DOM) ---- */
+/* Reset view: deselect and zoom to fit the whole graph. */
+function resetView() {
+  deselect();
+  Graph.zoomToFit(900, 60);
+}
+
+/* =============================================================
+   Inspector (plain DOM). Name, kind, subtitle, body, grouped
+   clickable connections that re-focus the chosen node.
+   ============================================================= */
 function openInspector(id) {
   const n = NODE_BY_ID[id];
   if (!n) return;
 
   const insp = document.getElementById("kgInspector");
   const app = document.getElementById("kgApp");
-  const color = COLORS[n.kind] || "#9aa";
+  const color = KIND_COLORS[n.kind] || "#9aa";
 
-  // Header.
   document.getElementById("kgInspKind").innerHTML =
-    '<span class="dot" style="background:' + color + '"></span>' + escapeHtml(LABELS[n.kind] || n.kind);
+    '<span class="dot" style="background:' + color + '"></span>' + escapeHtml(KIND_LABELS[n.kind] || n.kind);
   document.getElementById("kgInspName").textContent = n.label;
   const sub = document.getElementById("kgInspSubtitle");
   if (n.subtitle) { sub.textContent = n.subtitle; sub.style.display = ""; }
   else { sub.style.display = "none"; }
 
-  // Body: copy plus grouped, clickable connections.
   const body = document.getElementById("kgInspBody");
   let html = "";
-  if (n.body) {
-    html += '<p class="copy">' + escapeHtml(n.body) + "</p>";
-  } else {
-    html += '<p class="empty">No description on this node yet.</p>';
-  }
+  if (n.body) html += '<p class="copy">' + escapeHtml(n.body) + "</p>";
+  else html += '<p class="empty">No description on this node yet.</p>';
 
-  // Gather connections: outgoing (this -> other) and incoming (other -> this).
   const out = [];
   const inc = [];
   DATA.links.forEach(function (l) {
-    if (l.source === id) out.push({ otherId: l.target, rel: l.label || "at", dir: "out" });
-    if (l.target === id) inc.push({ otherId: l.source, rel: l.label || "at", dir: "in" });
+    if (l.source === id) out.push({ otherId: l.target, rel: l.label || "linked" });
+    if (l.target === id) inc.push({ otherId: l.source, rel: l.label || "linked" });
   });
 
   html += renderConnGroup("Connects to", out);
   html += renderConnGroup("Connected from", inc);
-
   if (out.length === 0 && inc.length === 0) {
     html += '<p class="empty">No connections in this view.</p>';
   }
 
   body.innerHTML = html;
 
-  // Wire each connection button to re-select its node.
   Array.prototype.forEach.call(body.querySelectorAll(".kg-conn"), function (btn) {
     btn.addEventListener("click", function () {
-      selectNode(btn.getAttribute("data-id"));
+      const otherId = btn.getAttribute("data-id");
+      const target = NODE_BY_ID[otherId];
+      const liveNode = Graph.graphData().nodes.find(function (x) { return x.id === otherId; });
+      if (liveNode) onNodeClick(liveNode);
     });
   });
 
@@ -883,7 +1019,7 @@ function renderConnGroup(title, list) {
   list.forEach(function (c) {
     const other = NODE_BY_ID[c.otherId];
     if (!other) return;
-    const color = COLORS[other.kind] || "#9aa";
+    const color = KIND_COLORS[other.kind] || "#9aa";
     html +=
       '<button class="kg-conn" type="button" data-id="' + escapeHtml(other.id) + '">' +
         '<span class="dot" style="background:' + color + '"></span>' +
@@ -902,12 +1038,14 @@ function closeInspector() {
   document.getElementById("kgApp").classList.remove("insp-open");
 }
 
-function wireInspectorClose() {
-  document.getElementById("kgClose").addEventListener("click", deselect);
-}
+document.getElementById("kgClose").addEventListener("click", deselect);
+document.getElementById("kgReset").addEventListener("click", resetView);
 
-/* ---- Search: filter and center a node by name ---- */
-function wireSearch() {
+/* =============================================================
+   Search: type-ahead. Selecting a result flies the camera and
+   opens the inspector.
+   ============================================================= */
+(function wireSearch() {
   const input = document.getElementById("kgSearch");
   const suggest = document.getElementById("kgSuggest");
   let activeIdx = -1;
@@ -923,7 +1061,8 @@ function wireSearch() {
   function pick(id) {
     input.value = NODE_BY_ID[id] ? NODE_BY_ID[id].label : "";
     close();
-    selectNode(id);
+    const liveNode = Graph.graphData().nodes.find(function (x) { return x.id === id; });
+    if (liveNode) onNodeClick(liveNode);
   }
 
   function render(q) {
@@ -943,9 +1082,9 @@ function wireSearch() {
       li.setAttribute("data-id", n.id);
       if (i === activeIdx) li.classList.add("is-active");
       li.innerHTML =
-        '<span class="dot" style="background:' + (COLORS[n.kind] || "#9aa") + '"></span>' +
+        '<span class="dot" style="background:' + (KIND_COLORS[n.kind] || "#9aa") + '"></span>' +
         escapeHtml(n.label) +
-        '<span class="k">' + escapeHtml(LABELS[n.kind] || n.kind) + "</span>";
+        '<span class="k">' + escapeHtml(KIND_LABELS[n.kind] || n.kind) + "</span>";
       li.addEventListener("click", function () { pick(n.id); });
       suggest.appendChild(li);
     });
@@ -958,7 +1097,6 @@ function wireSearch() {
   input.addEventListener("keydown", function (e) {
     if (!matches.length) {
       if (e.key === "Enter" && input.value.trim()) {
-        // Direct best-effort match on Enter even without an open list.
         const needle = input.value.trim().toLowerCase();
         const hit = DATA.nodes.find(function (n) {
           return n.label.toLowerCase().indexOf(needle) !== -1;
@@ -985,29 +1123,129 @@ function wireSearch() {
     }
   });
 
-  // Close the suggestion list on outside click.
   document.addEventListener("click", function (e) {
     if (!e.target.closest(".kg-search")) close();
   });
+})();
+
+/* =============================================================
+   Scene polish after mount: fog at the bg color, strip the default
+   lights down to one faint ambient, start a slow auto-rotate that
+   pauses on user interaction and resumes when idle.
+   ============================================================= */
+let controls = null;
+let autoRotateResumeTimer = null;
+
+function pauseAutoRotate() {
+  if (controls) controls.autoRotate = false;
+  clearTimeout(autoRotateResumeTimer);
+}
+function resumeAutoRotateSoon() {
+  clearTimeout(autoRotateResumeTimer);
+  autoRotateResumeTimer = setTimeout(function () {
+    if (controls && !selectedId) controls.autoRotate = true;
+  }, 4000);
 }
 
-/* ---- Keep the graph fit on viewport resize ---- */
-let resizeTimer = null;
-window.addEventListener("resize", function () {
-  if (!cy) return;
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(function () {
-    cy.resize();
-    if (selectedId) {
-      const node = cy.getElementById(selectedId);
-      if (node && !node.empty()) {
-        cy.fit(node.closedNeighborhood(), 90);
+setTimeout(function () {
+  const scene = Graph.scene();
+  const camera = Graph.camera();
+  controls = Graph.controls();
+
+  // Depth fog: distant nodes dissolve into the void.
+  scene.fog = new THREE.FogExp2(0x0a0e1c, 0.00145);
+
+  // Strip library lights; the glow is all additive sprites. One faint ambient.
+  const toRemove = [];
+  scene.traverse(function (o) {
+    if (o.isLight) toRemove.push(o);
+  });
+  toRemove.forEach(function (l) { if (l.parent) l.parent.remove(l); });
+  scene.add(new THREE.AmbientLight(0x9aaccc, 0.16));
+
+  // Calm auto-rotate with smooth damping.
+  if (controls) {
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.55;   // slow, calm
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.12;
+    controls.update();
+  }
+
+  // Start the camera pulled back a little.
+  camera.position.z = 320;
+
+  // Pause auto-rotate the moment the user touches the scene; resume when idle.
+  const dom = Graph.renderer().domElement;
+  ["pointerdown", "wheel", "touchstart"].forEach(function (ev) {
+    dom.addEventListener(ev, function () { pauseAutoRotate(); }, { passive: true });
+  });
+  ["pointerup", "touchend"].forEach(function (ev) {
+    dom.addEventListener(ev, function () { resumeAutoRotateSoon(); }, { passive: true });
+  });
+  dom.addEventListener("mouseleave", function () { resumeAutoRotateSoon(); }, { passive: true });
+}, 300);
+
+/* =============================================================
+   Continuous render loop, separate from the simulation tick:
+   a gentle pulse on the focused / hovered node so the graph keeps
+   shimmering even when the layout has frozen.
+   ============================================================= */
+(function pulseLoop() {
+  function tick() {
+    if (!document.hidden) {
+      const t = performance.now() / 1000;
+      const pulse = 0.55 + Math.sin(t * Math.PI * 2 * 0.6) * 0.45; // 0.1 .. 1.0
+
+      const focusId = selectedId || hoverNodeId;
+      if (focusId) {
+        const n = Graph.graphData().nodes.find(function (x) { return x.id === focusId; });
+        const grp = n && n.__threeObj;
+        if (grp && grp.userData.core) {
+          const core = grp.userData.core;
+          const soma = core.userData.isSoma;
+          const opBoost = soma ? 0.2 : 0.12;
+          const scBoost = soma ? 0.18 : 0.12;
+          core.material.opacity = Math.min(1, core.userData.baseOpacity + opBoost * pulse);
+          const s = core.userData.baseScale * (1 + scBoost * pulse);
+          core.scale.set(s, s, 1);
+        }
       }
-    } else {
-      cy.fit(undefined, 50);
     }
-  }, 160);
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+
+/* =============================================================
+   Resize handling and initial fit + loader hide.
+   ============================================================= */
+function sizeGraph() {
+  Graph.width(elGraph.clientWidth);
+  Graph.height(elGraph.clientHeight);
+}
+window.addEventListener("resize", function () {
+  clearTimeout(window.__kgResizeTimer);
+  window.__kgResizeTimer = setTimeout(sizeGraph, 160);
 });
+sizeGraph();
+
+// Fit once the engine has settled a bit, then hide the loader.
+Graph.onEngineStop(function () {
+  // onEngineStop fires when the layout cools. Fit only the first time.
+  if (!window.__kgFitted) {
+    window.__kgFitted = true;
+    Graph.zoomToFit(800, 60);
+  }
+});
+setTimeout(function () {
+  const loader = document.getElementById("kgLoading");
+  loader.classList.add("is-hidden");
+  setTimeout(function () { loader.style.display = "none"; }, 450);
+}, 1200);
+
+// Expose a debug handle (avoid window.cy-style id collisions).
+window.__kg = { Graph: Graph, select: onNodeClick, deselect: deselect, reset: resetView };
 </script>
 
 </body>
