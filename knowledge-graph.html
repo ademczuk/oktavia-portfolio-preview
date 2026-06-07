@@ -3,1250 +3,1739 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Oktavia Portfolio - Knowledge graph (living constellation)</title>
-<meta name="description" content="An interactive 3D constellation of the institutional memory: AI colleagues, PortCos, bottlenecks, interventions, and playbooks, and how they connect." />
+<title>Oktavia Portfolio - Knowledge graph (operating map)</title>
+<meta name="description" content="The portfolio operating map: AI colleagues, PortCos, value leaks, interventions, and reusable playbooks, laid out as a 2D layered graph with lanes, lenses, and a node inspector." />
 
-<!-- Fonts: Instrument Serif display + IBM Plex Sans body + IBM Plex Mono labels -->
+<!-- Fonts: Instrument Serif display + IBM Plex Sans body + IBM Plex Mono labels + Inter for canvas node labels -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=Inter:wght@500;600;700&display=swap" rel="stylesheet" />
 
 <!-- Shared preview-site design system (amber accent, dark navy canvas, brand fonts) -->
 <link rel="stylesheet" href="style.css" />
 
-<!-- Graph engine: standalone 3d-force-graph UMD (bundles three.js), pinned. -->
-<!-- three-spritetext is loaded as ESM inside the module script below. -->
-<script src="https://cdn.jsdelivr.net/npm/3d-force-graph@1.80.0/dist/3d-force-graph.min.js"></script>
+<!-- Graph engine: Cytoscape.js core + dagre layout (same extension the real app uses). Pinned, all return HTTP 200. -->
+<script src="https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dagre@0.8.5/dist/dagre.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2.5.0/cytoscape-dagre.min.js"></script>
 
 <style>
-  /* ---- Page-local layout ---- */
+  /* ===========================================================
+     Page-local layout for the operating map.
+     Resolves the app's oklch theme tokens to hex/rgb so the
+     port is self-contained, then mirrors the live canvas chrome.
+     =========================================================== */
+  :root {
+    --color-background: #10131c;       /* very dark navy */
+    --color-foreground: #f7f8fa;       /* near white */
+    --color-muted-foreground: #9298a5; /* slate grey */
+    --kg-amber: #f4b942;
+    --kg-teal: #5eead4;
+    --kg-coral: #f97e63;
+    --kg-purple: #8b7cf7;
+    --kg-blue: #7cc4f7;
+    --kg-teal-soft: #5cd9b3;
+    --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    --font-display: "Instrument Serif", Georgia, serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+
   html, body { height: 100%; }
-  body { overflow: hidden; background: #0a0e1c; }
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
 
   .kg-app {
     position: fixed;
     inset: 0;
     z-index: 2;
+    display: grid;
+    grid-template-rows: auto 1fr;
     height: 100%;
   }
 
-  /* ---- The 3D stage fills the viewport ---- */
-  #kgGraph {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-  }
-  #kgGraph canvas { display: block; outline: none; }
-
-  /* ---- Headline strip (overlay, top) ---- */
-  .kg-bar {
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    z-index: 10;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.7rem 1.1rem;
-    padding: 0.7rem clamp(0.8rem, 3vw, 1.5rem);
-    background: oklch(0.10 0.018 260 / 0.62);
-    backdrop-filter: blur(14px);
-    border-bottom: 1px solid var(--line-soft);
-    pointer-events: none;
-  }
-  .kg-bar > * { pointer-events: auto; }
-
-  .kg-title {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.55rem;
-    font-family: var(--font-display);
-    font-size: clamp(1.1rem, 0.9rem + 1vw, 1.5rem);
-    letter-spacing: 0.01em;
-    color: var(--ink);
-    white-space: nowrap;
-  }
-  .kg-title small {
-    font-family: var(--font-mono);
-    font-size: 0.58rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-  }
-
-  /* ---- Live counts per kind ---- */
-  .kg-counts {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-  }
-  .kg-count {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.42rem;
-    font-family: var(--font-mono);
-    font-size: 0.66rem;
-    letter-spacing: 0.03em;
-    color: var(--ink-dim);
-    padding: 0.26rem 0.58rem;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-pill);
-    background: oklch(0.16 0.02 260 / 0.45);
-  }
-  .kg-count .swatch {
-    width: 15px;
-    height: 10px;
-    flex: none;
-    border-radius: 3px;
-  }
-  .kg-count .num {
-    color: var(--ink);
-    font-weight: 500;
-  }
-
-  /* ---- Search (top-left area of the bar, pushed right via margin) ---- */
-  .kg-search {
-    margin-left: auto;
-    position: relative;
-    flex: 1 1 200px;
-    max-width: 280px;
-    min-width: 160px;
-  }
-  .kg-search input {
-    width: 100%;
-    box-sizing: border-box;
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    color: var(--ink);
-    background: oklch(0.14 0.018 260 / 0.85);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-pill);
-    padding: 0.5rem 0.85rem;
-    outline: none;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  }
-  .kg-search input::placeholder { color: var(--ink-faint); }
-  .kg-search input:focus {
-    border-color: var(--accent-line);
-    box-shadow: 0 0 0 3px var(--accent-soft);
-  }
-  .kg-suggest {
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 0;
-    right: 0;
-    z-index: 30;
-    list-style: none;
-    margin: 0;
-    padding: 0.25rem;
-    background: oklch(0.13 0.018 260 / 0.97);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow);
-    max-height: 280px;
-    overflow-y: auto;
-    display: none;
-  }
-  .kg-suggest.is-open { display: block; }
-  .kg-suggest li {
+  /* ---- Topbar: eyebrow/title, search, summary chips ---- */
+  .kg-topbar {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.4rem 0.55rem;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    font-size: 0.82rem;
-    color: var(--ink-dim);
+    gap: 16px;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgb(255 255 255 / 0.08);
+    background: rgb(5 8 16 / 0.72);
+    backdrop-filter: blur(18px) saturate(135%);
   }
-  .kg-suggest li:hover, .kg-suggest li.is-active {
-    background: var(--accent-soft);
-    color: var(--ink);
+  .kg-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .kg-brand-mark {
+    width: 38px; height: 38px; flex: none;
+    border-radius: 11px;
+    border: 1px solid color-mix(in srgb, var(--kg-amber) 38%, transparent);
+    background: rgb(244 185 66 / 0.1);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--kg-amber);
   }
-  .kg-suggest li .dot {
-    width: 9px; height: 9px; border-radius: 50%; flex: none;
-  }
-  .kg-suggest li .k {
-    margin-left: auto;
+  .kg-brand-text { min-width: 0; }
+  .kg-eyebrow {
+    color: var(--kg-amber);
     font-family: var(--font-mono);
-    font-size: 0.6rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-  }
-
-  /* ---- Legend (always-on, bottom-left) ---- */
-  .kg-legend {
-    position: absolute;
-    left: clamp(0.6rem, 2vw, 1.1rem);
-    bottom: clamp(0.6rem, 2vw, 1.1rem);
-    z-index: 12;
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    padding: 0.75rem 0.85rem;
-    background: oklch(0.11 0.018 260 / 0.78);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    backdrop-filter: blur(10px);
-    max-width: 230px;
-  }
-  .kg-legend h4 {
-    margin: 0 0 0.15rem;
-    font-family: var(--font-mono);
-    font-size: 0.56rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-    font-weight: 500;
-  }
-  .kg-legend .row {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    font-size: 0.76rem;
-    color: var(--ink-dim);
-  }
-  .kg-legend .dot {
-    width: 12px; height: 12px; flex: none;
-    border-radius: 50%;
-    box-shadow: 0 0 8px 1px currentColor;
-  }
-  .kg-legend .hint {
-    margin-top: 0.25rem;
-    font-size: 0.66rem;
-    color: var(--ink-faint);
-    line-height: 1.45;
-  }
-
-  /* ---- Controls cluster (bottom-left, under legend) ---- */
-  .kg-controls {
-    position: absolute;
-    left: clamp(0.6rem, 2vw, 1.1rem);
-    bottom: clamp(0.6rem, 2vw, 1.1rem);
-    z-index: 13;
-    display: none; /* shown after legend height is known; we just stack via order below */
-  }
-
-  .kg-reset {
-    font-family: var(--font-mono);
-    font-size: 0.66rem;
-    letter-spacing: 0.06em;
-    color: var(--ink-dim);
-    background: oklch(0.13 0.018 260 / 0.85);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-pill);
-    padding: 0.42rem 0.8rem;
-    cursor: pointer;
-    transition: border-color 0.2s ease, color 0.2s ease;
-  }
-  .kg-reset:hover { border-color: var(--accent-line); color: var(--ink); }
-
-  /* The legend hosts the reset button at its foot so they stack cleanly. */
-  .kg-legend .kg-reset { margin-top: 0.35rem; align-self: flex-start; }
-
-  /* ---- Inspector (right side, plain DOM) ---- */
-  .kg-inspector {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: min(380px, 88vw);
-    z-index: 20;
-    transform: translateX(102%);
-    transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
-    display: flex;
-    flex-direction: column;
-    background: oklch(0.10 0.018 260 / 0.94);
-    border-left: 1px solid var(--line);
-    backdrop-filter: blur(16px);
-    box-shadow: -28px 0 80px -40px rgba(0,0,0,0.85);
-  }
-  .kg-inspector.is-open { transform: none; }
-
-  .kg-insp-head {
-    padding: 1.1rem 1.2rem 0.9rem;
-    border-bottom: 1px solid var(--line-soft);
-    position: relative;
-  }
-  .kg-insp-kind {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-    margin-bottom: 0.5rem;
-  }
-  .kg-insp-kind .dot { width: 9px; height: 9px; border-radius: 50%; }
-  .kg-insp-name {
-    font-family: var(--font-display);
-    font-size: 1.6rem;
-    line-height: 1.12;
-    color: var(--ink);
-  }
-  .kg-insp-subtitle {
-    margin-top: 0.3rem;
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    color: var(--ink-dim);
-    letter-spacing: 0.02em;
-  }
-  .kg-insp-close {
-    position: absolute;
-    top: 0.9rem;
-    right: 0.95rem;
-    width: 30px; height: 30px;
-    display: grid; place-items: center;
-    background: transparent;
-    border: 1px solid var(--line);
-    border-radius: 50%;
-    color: var(--ink-dim);
-    cursor: pointer;
-    font-size: 1rem;
-    line-height: 1;
-    transition: color 0.2s ease, border-color 0.2s ease;
-  }
-  .kg-insp-close:hover { color: var(--ink); border-color: var(--accent-line); }
-
-  .kg-insp-body {
-    padding: 1.1rem 1.2rem 1.6rem;
-    overflow-y: auto;
-    flex: 1 1 auto;
-  }
-  .kg-insp-body p.copy {
-    margin: 0 0 1.3rem;
-    font-size: 0.92rem;
-    line-height: 1.62;
-    color: var(--ink-dim);
-  }
-  .kg-insp-body .empty {
-    font-size: 0.84rem;
-    color: var(--ink-faint);
-    font-style: italic;
-    margin-bottom: 1.3rem;
-  }
-
-  .kg-conn-group { margin-bottom: 1.2rem; }
-  .kg-conn-group h5 {
-    margin: 0 0 0.5rem;
-    font-family: var(--font-mono);
-    font-size: 0.6rem;
+    font-size: 10px;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--ink-faint);
-    font-weight: 500;
   }
-  .kg-conn {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    width: 100%;
-    text-align: left;
-    background: oklch(0.15 0.02 260 / 0.6);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-sm);
-    padding: 0.55rem 0.65rem;
-    margin-bottom: 0.4rem;
-    cursor: pointer;
-    color: var(--ink-dim);
-    transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
-  }
-  .kg-conn:hover {
-    border-color: var(--accent-line);
-    background: oklch(0.17 0.02 260 / 0.75);
-    transform: translateX(2px);
-    color: var(--ink);
-  }
-  .kg-conn .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
-  .kg-conn .label {
-    font-size: 0.84rem;
-    flex: 1 1 auto;
-    line-height: 1.25;
-  }
-  .kg-conn .rel {
-    font-family: var(--font-mono);
-    font-size: 0.58rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--accent);
+  .kg-title {
+    font-family: var(--font-display);
+    font-size: 21px;
+    line-height: 1.1;
+    color: var(--color-foreground);
     white-space: nowrap;
   }
 
-  /* ---- Footer pill (honest) ---- */
-  .kg-foot {
-    position: absolute;
-    right: clamp(0.6rem, 2vw, 1.1rem);
-    bottom: clamp(0.6rem, 2vw, 1.1rem);
-    z-index: 12;
-    font-family: var(--font-mono);
-    font-size: 0.62rem;
-    letter-spacing: 0.05em;
-    color: var(--ink-faint);
-    padding: 0.4rem 0.75rem;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-pill);
-    background: oklch(0.11 0.018 260 / 0.82);
-    backdrop-filter: blur(8px);
-    transition: opacity 0.3s ease;
+  .kg-search { position: relative; flex: 1; max-width: 460px; }
+  .kg-search-input {
+    width: 100%;
+    height: 40px;
+    border-radius: 11px;
+    border: 1px solid rgb(255 255 255 / 0.1);
+    background: rgb(255 255 255 / 0.045);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    padding: 0 36px 0 14px;
+    outline: none;
+    transition: border-color 160ms ease, background 160ms ease;
+  }
+  .kg-search-input:focus {
+    border-color: rgb(94 234 212 / 0.42);
+    background: rgb(94 234 212 / 0.08);
+  }
+  .kg-search-input::placeholder { color: var(--color-muted-foreground); }
+  .kg-search-clear {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    width: 22px; height: 22px;
+    border: none; border-radius: 6px;
+    background: rgb(255 255 255 / 0.06);
+    color: var(--color-muted-foreground);
+    cursor: pointer; line-height: 1;
+    display: none;
+  }
+  .kg-search-clear:hover { color: var(--color-foreground); background: rgb(255 255 255 / 0.12); }
+  .kg-search.has-query .kg-search-clear { display: inline-flex; align-items: center; justify-content: center; }
+
+  .kg-search-results {
+    position: absolute; left: 0; right: 0; top: calc(100% + 8px);
+    z-index: 40;
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: 14px;
+    background: rgb(5 8 16 / 0.95);
+    box-shadow: 0 22px 70px rgb(0 0 0 / 0.5);
+    backdrop-filter: blur(18px);
+    padding: 6px;
+    max-height: 340px;
+    overflow: auto;
+    display: none;
+  }
+  .kg-search.open .kg-search-results { display: block; }
+  .kg-search-hit {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; text-align: left;
+    border: none; border-radius: 9px; background: transparent;
+    color: var(--color-foreground);
+    padding: 8px 10px; cursor: pointer;
+    transition: background 140ms ease;
+  }
+  .kg-search-hit:hover { background: rgb(94 234 212 / 0.1); }
+  .kg-search-hit .kg-hit-icon { width: 18px; height: 18px; flex: none; }
+  .kg-search-hit .kg-hit-body { min-width: 0; }
+  .kg-search-hit .kg-hit-label { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kg-search-hit .kg-hit-meta {
+    font-family: var(--font-mono); font-size: 9px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--color-muted-foreground);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .kg-search-empty {
+    padding: 14px 12px; font-size: 12px;
+    color: var(--color-muted-foreground); line-height: 1.5;
   }
 
-  /* ---- Loading note ---- */
-  .kg-loading {
-    position: absolute;
-    inset: 0;
-    z-index: 5;
+  .kg-summary { display: flex; align-items: center; gap: 9px; margin-left: auto; }
+  .kg-chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: 10px;
+    background: rgb(255 255 255 / 0.04);
+    padding: 7px 11px;
+  }
+  .kg-chip .kg-chip-icon { width: 15px; height: 15px; }
+  .kg-chip-text { line-height: 1.1; }
+  .kg-chip-val { font-size: 15px; font-weight: 700; }
+  .kg-chip-label {
+    font-family: var(--font-mono); font-size: 8px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--color-muted-foreground);
+  }
+  .kg-chip.tone-coral .kg-chip-icon { color: var(--kg-coral); }
+  .kg-chip.tone-blue .kg-chip-icon { color: var(--kg-blue); }
+  .kg-chip.tone-teal .kg-chip-icon { color: var(--kg-teal); }
+  .kg-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid color-mix(in srgb, var(--kg-teal) 30%, transparent);
+    border-radius: 999px;
+    background: rgb(94 234 212 / 0.1);
+    color: color-mix(in srgb, var(--kg-teal) 80%, white);
+    font-family: var(--font-mono); font-size: 9px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 6px 11px;
+  }
+  .kg-pill .kg-pill-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--kg-teal);
+    box-shadow: 0 0 8px var(--kg-teal);
+  }
+
+  /* ---- Main grid: filter rail | stage | inspector ---- */
+  .kg-body {
     display: grid;
-    place-items: center;
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    letter-spacing: 0.06em;
-    color: var(--ink-faint);
-    pointer-events: none;
-    transition: opacity 0.4s ease;
+    grid-template-columns: 286px 1fr 340px;
+    min-height: 0;
   }
-  .kg-loading.is-hidden { opacity: 0; }
 
-  /* When inspector is open on a wide screen, nudge the footer pill clear of it */
-  @media (min-width: 760px) {
-    .kg-app.insp-open .kg-foot { right: calc(min(380px, 88vw) + 1.1rem); }
+  /* ---- Glass panel base ---- */
+  .kg-glass {
+    border: 1px solid rgb(255 255 255 / 0.1);
+    border-radius: 18px;
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.078), rgb(255 255 255 / 0.032)),
+      rgb(5 8 16 / 0.72);
+    box-shadow: 0 22px 70px rgb(0 0 0 / 0.34), inset 0 1px 0 rgb(255 255 255 / 0.08);
+    backdrop-filter: blur(18px) saturate(135%);
   }
-  /* On small screens the inspector covers most of the stage, so hide floating bits */
-  @media (max-width: 640px) {
-    .kg-app.insp-open .kg-legend,
-    .kg-app.insp-open .kg-foot { opacity: 0; pointer-events: none; }
-    .kg-counts { display: none; }
+
+  /* ---- Filter rail ---- */
+  .kg-rail {
+    overflow-y: auto;
+    padding: 14px;
+    border-right: 1px solid rgb(255 255 255 / 0.06);
+  }
+  .kg-rail-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .kg-rail-head h3 {
+    font-family: var(--font-display); font-size: 17px;
+    color: var(--color-foreground); font-weight: 400;
+  }
+  .kg-reset {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid rgb(255 255 255 / 0.1); border-radius: 8px;
+    background: rgb(255 255 255 / 0.045);
+    color: var(--color-muted-foreground);
+    font-family: var(--font-mono); font-size: 9px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 5px 9px; cursor: pointer;
+    transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+  }
+  .kg-reset:hover {
+    border-color: rgb(94 234 212 / 0.42);
+    background: rgb(94 234 212 / 0.1);
+    color: var(--color-foreground);
+  }
+
+  .kg-section { margin-bottom: 18px; }
+  .kg-section-title {
+    font-family: var(--font-mono); font-size: 9px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--color-muted-foreground);
+    margin-bottom: 9px;
+  }
+
+  .kg-kind-toggle {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; text-align: left;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    border-radius: 11px;
+    background: rgb(255 255 255 / 0.03);
+    color: var(--color-foreground);
+    padding: 9px 11px; margin-bottom: 7px; cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease, opacity 160ms ease;
+  }
+  .kg-kind-toggle .kg-kind-icon { width: 18px; height: 18px; flex: none; color: var(--kind-color); }
+  .kg-kind-toggle .kg-kind-body { flex: 1; min-width: 0; }
+  .kg-kind-toggle .kg-kind-name { font-size: 13px; font-weight: 600; }
+  .kg-kind-toggle .kg-kind-count {
+    font-family: var(--font-mono); font-size: 9px;
+    color: var(--color-muted-foreground);
+  }
+  .kg-kind-toggle .kg-kind-swatch {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--kind-color); flex: none;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--kind-color) 60%, transparent);
+  }
+  .kg-kind-toggle[aria-pressed="false"] { opacity: 0.42; }
+  .kg-kind-toggle.kg-kind-toggle-active {
+    border-color: color-mix(in srgb, var(--kind-color) 48%, transparent);
+    background: color-mix(in srgb, var(--kind-color) 12%, rgb(255 255 255 / 0.03));
+  }
+
+  .kg-lens {
+    display: block; width: 100%; text-align: left;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    border-radius: 11px;
+    background: rgb(255 255 255 / 0.03);
+    color: var(--color-foreground);
+    padding: 10px 11px; margin-bottom: 7px; cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease;
+  }
+  .kg-lens .kg-lens-name { font-size: 12px; font-weight: 600; }
+  .kg-lens .kg-lens-desc {
+    font-size: 10.5px; color: var(--color-muted-foreground);
+    line-height: 1.4; margin-top: 2px;
+  }
+  .kg-lens.kg-lens-active {
+    border-color: rgb(244 185 66 / 0.5);
+    background: rgb(244 185 66 / 0.1);
+  }
+
+  .kg-slider-row { padding: 4px 2px 2px; }
+  .kg-slider-label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 11px; color: var(--color-muted-foreground); margin-bottom: 7px;
+  }
+  .kg-slider-label b { color: var(--color-foreground); font-family: var(--font-mono); font-size: 12px; }
+  .kg-slider {
+    width: 100%; appearance: none; height: 4px; border-radius: 999px;
+    background: rgb(255 255 255 / 0.12); outline: none; cursor: pointer;
+  }
+  .kg-slider::-webkit-slider-thumb {
+    appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--kg-amber); border: 2px solid #050810; cursor: pointer;
+    box-shadow: 0 0 10px rgb(244 185 66 / 0.6);
+  }
+  .kg-slider::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--kg-amber); border: 2px solid #050810; cursor: pointer;
+  }
+
+  .kg-overlay-toggle {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    width: 100%; text-align: left;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    border-radius: 11px;
+    background: rgb(255 255 255 / 0.03);
+    color: var(--color-foreground);
+    padding: 9px 11px; margin-bottom: 7px; cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease;
+  }
+  .kg-overlay-toggle .kg-overlay-name { font-size: 12px; font-weight: 600; }
+  .kg-overlay-switch {
+    width: 34px; height: 18px; flex: none; border-radius: 999px;
+    background: rgb(255 255 255 / 0.14); position: relative;
+    transition: background 160ms ease;
+  }
+  .kg-overlay-switch::after {
+    content: ""; position: absolute; top: 2px; left: 2px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #cfd4dc; transition: transform 160ms ease, background 160ms ease;
+  }
+  .kg-overlay-toggle[aria-pressed="true"] .kg-overlay-switch { background: rgb(94 234 212 / 0.55); }
+  .kg-overlay-toggle[aria-pressed="true"] .kg-overlay-switch::after { transform: translateX(16px); background: #050810; }
+
+  /* ---- Stage (canvas column) ---- */
+  .kg-stage {
+    display: grid; grid-template-rows: auto 1fr auto;
+    min-width: 0; min-height: 0;
+    padding: 12px;
+  }
+  .kg-stage-head { padding: 0 6px 10px; }
+  .kg-stage-head .kg-eyebrow { display: block; }
+  .kg-stage-head h2 {
+    font-family: var(--font-display); font-size: 24px; font-weight: 400;
+    margin: 3px 0 9px; color: var(--color-foreground);
+  }
+  .kg-legend { display: flex; flex-wrap: wrap; gap: 14px; }
+  .kg-legend-item {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 11px; color: var(--color-muted-foreground);
+  }
+  .kg-legend-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--dot); }
+
+  .kg-cytoscape-shell {
+    position: relative; flex: 1; min-height: 0;
+    border-radius: 18px; overflow: hidden;
+    border: 1px solid rgb(255 255 255 / 0.08);
+  }
+  .kg-cytoscape-canvas {
+    position: absolute; inset: 0; z-index: 1;
+    background:
+      radial-gradient(circle at 50% 46%, rgb(94 234 212 / 0.08), transparent 44%),
+      linear-gradient(180deg, rgb(255 255 255 / 0.035), transparent),
+      #050810;
+  }
+
+  .kg-lane-bar {
+    position: absolute; top: 12px; left: 12px; right: 12px; z-index: 5;
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px; pointer-events: none;
+  }
+  .kg-lane-label {
+    border: 1px solid color-mix(in srgb, var(--kind-color) 30%, transparent);
+    border-radius: 12px;
+    background: rgb(2 5 13 / 0.62);
+    padding: 8px 10px;
+    color: color-mix(in srgb, var(--kind-color) 74%, white);
+    font-family: var(--font-mono); font-size: 9px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    backdrop-filter: blur(12px);
+  }
+  .kg-lane-label small {
+    display: block; margin-top: 3px;
+    color: var(--color-muted-foreground);
+    letter-spacing: 0.08em;
+  }
+
+  .kg-graph-controls {
+    position: absolute; right: 14px; bottom: 14px; z-index: 8;
+    display: flex; gap: 7px;
+  }
+  .kg-icon-button {
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    width: 36px; height: 36px;
+    border: 1px solid rgb(255 255 255 / 0.1); border-radius: 10px;
+    background: rgb(255 255 255 / 0.045);
+    color: var(--color-muted-foreground);
+    cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+  }
+  .kg-icon-button:hover {
+    border-color: rgb(94 234 212 / 0.42);
+    background: rgb(94 234 212 / 0.12);
+    color: var(--color-foreground);
+  }
+
+  /* Empty canvas state */
+  .kg-canvas-empty {
+    position: absolute; inset: 0; z-index: 6;
+    display: none; align-items: center; justify-content: center; padding: 24px;
+  }
+  .kg-canvas-empty.show { display: flex; }
+  .kg-empty-card {
+    text-align: center; max-width: 360px;
+    border-radius: 18px; padding: 26px 24px;
+  }
+  .kg-empty-card .kg-eyebrow { display: block; margin-bottom: 8px; }
+  .kg-empty-card h3 {
+    font-family: var(--font-display); font-size: 21px; font-weight: 400;
+    color: var(--color-foreground); margin-bottom: 8px;
+  }
+  .kg-empty-card p { font-size: 13px; color: var(--color-muted-foreground); line-height: 1.5; margin-bottom: 16px; }
+  .kg-empty-card .kg-reset { font-size: 11px; padding: 8px 14px; }
+
+  .kg-trail {
+    padding: 10px 6px 0;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .kg-trail-label {
+    font-family: var(--font-mono); font-size: 9px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--color-muted-foreground);
+  }
+  .kg-history-item {
+    border: 1px solid rgb(255 255 255 / 0.1); border-radius: 999px;
+    background: rgb(255 255 255 / 0.04);
+    color: var(--color-muted-foreground);
+    font-size: 11px; padding: 5px 11px; cursor: pointer;
+    transition: border-color 140ms ease, color 140ms ease, background 140ms ease;
+  }
+  .kg-history-item:hover { color: var(--color-foreground); border-color: rgb(255 255 255 / 0.2); }
+  .kg-history-item-active {
+    border-color: rgb(244 185 66 / 0.5);
+    background: rgb(244 185 66 / 0.12);
+    color: var(--kg-amber);
+  }
+  .kg-trail-empty { font-size: 11px; color: var(--color-muted-foreground); }
+
+  /* ---- Inspector ---- */
+  .kg-inspector {
+    overflow-y: auto;
+    padding: 14px;
+    border-left: 1px solid rgb(255 255 255 / 0.06);
+  }
+  .kg-insp-empty { padding: 8px 4px; }
+  .kg-insp-emblem {
+    width: 44px; height: 44px; border-radius: 13px;
+    border: 1px solid rgb(255 255 255 / 0.12);
+    background: rgb(255 255 255 / 0.05);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--color-muted-foreground); margin-bottom: 14px;
+  }
+  .kg-insp-empty .kg-eyebrow { display: block; margin-bottom: 6px; }
+  .kg-insp-empty h3 {
+    font-family: var(--font-display); font-size: 20px; font-weight: 400;
+    color: var(--color-foreground); line-height: 1.2; margin-bottom: 10px;
+  }
+  .kg-insp-empty p { font-size: 12.5px; color: var(--color-muted-foreground); line-height: 1.55; margin-bottom: 16px; }
+  .kg-insp-summary { display: grid; gap: 8px; }
+  .kg-insp-summary-row {
+    display: flex; justify-content: space-between; align-items: center;
+    border: 1px solid rgb(255 255 255 / 0.08); border-radius: 11px;
+    background: rgb(255 255 255 / 0.03); padding: 10px 12px;
+  }
+  .kg-insp-summary-row .k { font-size: 12px; color: var(--color-muted-foreground); }
+  .kg-insp-summary-row .v { font-size: 17px; font-weight: 700; }
+
+  .kg-insp-header {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    margin-bottom: 14px;
+  }
+  .kg-insp-kind {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--kind-color);
+  }
+  .kg-insp-kind .kg-kind-icon { width: 16px; height: 16px; }
+  .kg-open-link {
+    display: inline-flex; align-items: center; gap: 5px;
+    border: 1px solid rgb(244 185 66 / 0.4); border-radius: 9px;
+    background: rgb(244 185 66 / 0.1);
+    color: var(--kg-amber);
+    font-family: var(--font-mono); font-size: 9px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 6px 10px; cursor: pointer;
+    transition: background 150ms ease;
+  }
+  .kg-open-link:hover { background: rgb(244 185 66 / 0.2); }
+
+  .kg-insp-name {
+    font-family: var(--font-display); font-size: 25px; font-weight: 400;
+    line-height: 1.12; color: var(--color-foreground); margin-bottom: 6px;
+  }
+  .kg-insp-subtitle { font-size: 13px; color: color-mix(in srgb, var(--kg-amber) 70%, white); margin-bottom: 10px; }
+  .kg-insp-body { font-size: 13px; color: var(--color-muted-foreground); line-height: 1.6; margin-bottom: 16px; }
+
+  .kg-facts { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 18px; }
+  .kg-fact {
+    border: 1px solid rgb(255 255 255 / 0.08); border-radius: 11px;
+    background: rgb(255 255 255 / 0.03); padding: 10px;
+  }
+  .kg-fact .kg-fact-k {
+    font-family: var(--font-mono); font-size: 8px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--color-muted-foreground); margin-bottom: 4px;
+  }
+  .kg-fact .kg-fact-v { font-size: 14px; font-weight: 700; }
+
+  .kg-insp-section-title {
+    display: flex; align-items: center; gap: 7px;
+    font-family: var(--font-mono); font-size: 9px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--color-muted-foreground); margin: 0 0 9px;
+  }
+  .kg-insp-section-title svg { width: 14px; height: 14px; }
+  .kg-conn {
+    display: flex; align-items: center; gap: 9px;
+    width: 100%; text-align: left;
+    border: 1px solid rgb(255 255 255 / 0.08); border-radius: 11px;
+    background: rgb(255 255 255 / 0.03);
+    color: var(--color-foreground);
+    padding: 8px 10px; margin-bottom: 6px; cursor: pointer;
+    transition: border-color 140ms ease, background 140ms ease;
+  }
+  .kg-conn:hover { border-color: rgb(94 234 212 / 0.4); background: rgb(94 234 212 / 0.08); }
+  .kg-conn .kg-conn-icon { width: 16px; height: 16px; flex: none; color: var(--kind-color); }
+  .kg-conn .kg-conn-body { min-width: 0; flex: 1; }
+  .kg-conn .kg-conn-label { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kg-conn .kg-conn-rel { font-size: 10.5px; color: var(--color-muted-foreground); }
+
+  .kg-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+  .kg-tag {
+    border: 1px solid rgb(255 255 255 / 0.12); border-radius: 999px;
+    background: rgb(255 255 255 / 0.04);
+    font-size: 11px; color: var(--color-foreground);
+    padding: 4px 10px;
+  }
+  .kg-tag.kg-tag-muted { color: var(--color-muted-foreground); border-style: dashed; }
+
+  .kg-insp-block { margin-bottom: 18px; }
+  .kg-empty-line { font-size: 12px; color: var(--color-muted-foreground); line-height: 1.5; }
+
+  /* ---- Responsive ---- */
+  @media (max-width: 1180px) {
+    .kg-body { grid-template-columns: 250px 1fr 300px; }
+    .kg-lane-bar { grid-template-columns: 1fr 1fr; }
+    .kg-summary .kg-chip-label { display: none; }
+  }
+  @media (max-width: 880px) {
+    .kg-body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    .kg-rail, .kg-inspector { display: none; }
+    .kg-summary { display: none; }
+  }
+
+  /* Scrollbars */
+  .kg-rail::-webkit-scrollbar, .kg-inspector::-webkit-scrollbar, .kg-search-results::-webkit-scrollbar { width: 8px; }
+  .kg-rail::-webkit-scrollbar-thumb, .kg-inspector::-webkit-scrollbar-thumb, .kg-search-results::-webkit-scrollbar-thumb {
+    background: rgb(255 255 255 / 0.1); border-radius: 999px;
   }
 </style>
 </head>
-
 <body class="grain">
+<div class="kg-app">
 
-<div class="kg-app" id="kgApp">
-
-  <!-- 3D stage -->
-  <div id="kgGraph"></div>
-
-  <!-- Headline strip: title, live counts, search -->
-  <header class="kg-bar">
-    <span class="kg-title">
-      Knowledge graph
-      <small>Oktavia Portfolio</small>
-    </span>
-
-    <div class="kg-counts" id="kgCounts" aria-label="Node counts per kind"></div>
-
-    <div class="kg-search">
-      <input
-        id="kgSearch"
-        type="search"
-        autocomplete="off"
-        spellcheck="false"
-        placeholder="Search a node by name" />
-      <ul class="kg-suggest" id="kgSuggest" role="listbox"></ul>
+  <!-- ============ TOPBAR ============ -->
+  <header class="kg-topbar">
+    <div class="kg-brand">
+      <span class="kg-brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+      </span>
+      <div class="kg-brand-text">
+        <div class="kg-eyebrow">Oktavia knowledge graph</div>
+        <div class="kg-title">Portfolio operating map</div>
+      </div>
     </div>
+
+    <div class="kg-search" id="kgSearch">
+      <input id="kgSearchInput" class="kg-search-input" type="text" autocomplete="off" spellcheck="false"
+             placeholder="Search PortCos, value leaks, agents, playbooks..." />
+      <button id="kgSearchClear" class="kg-search-clear" aria-label="Clear search">x</button>
+      <div id="kgSearchResults" class="kg-search-results" role="listbox"></div>
+    </div>
+
+    <div class="kg-summary" id="kgSummary"></div>
   </header>
 
-  <div class="kg-loading" id="kgLoading">Loading the constellation</div>
+  <!-- ============ BODY GRID ============ -->
+  <div class="kg-body">
 
-  <!-- Always-on legend: color per kind, plus the reset control and a hint -->
-  <div class="kg-legend" id="kgLegend">
-    <h4>Legend</h4>
-    <!-- rows injected by JS -->
-    <p class="hint">Drag to orbit, scroll to zoom. Click a node to fly in and see its connections. Click empty space to reset.</p>
-    <button class="kg-reset" id="kgReset" type="button">Reset view</button>
+    <!-- ---- FILTER RAIL ---- -->
+    <aside class="kg-rail" id="kgRail">
+      <div class="kg-rail-head">
+        <h3>Command console</h3>
+        <button id="kgReset" class="kg-reset">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+          Reset
+        </button>
+      </div>
+
+      <div class="kg-section">
+        <div class="kg-section-title">Entity types</div>
+        <div id="kgKindToggles"></div>
+      </div>
+
+      <div class="kg-section">
+        <div class="kg-section-title">Operating lenses</div>
+        <div id="kgLenses"></div>
+      </div>
+
+      <div class="kg-section">
+        <div class="kg-section-title">Declutter</div>
+        <div class="kg-slider-row">
+          <div class="kg-slider-label"><span>Minimum importance</span><b id="kgImportanceVal">0</b></div>
+          <input id="kgImportance" class="kg-slider" type="range" min="0" max="16" step="1" value="0" />
+        </div>
+      </div>
+
+      <div class="kg-section">
+        <div class="kg-section-title">Evidence overlays</div>
+        <button id="kgProvenance" class="kg-overlay-toggle" aria-pressed="true">
+          <span class="kg-overlay-name">Show provenance labels</span>
+          <span class="kg-overlay-switch" aria-hidden="true"></span>
+        </button>
+        <button id="kgMoney" class="kg-overlay-toggle" aria-pressed="true">
+          <span class="kg-overlay-name">Show money-impact labels</span>
+          <span class="kg-overlay-switch" aria-hidden="true"></span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ---- STAGE ---- -->
+    <main class="kg-stage">
+      <div class="kg-stage-head">
+        <span class="kg-eyebrow">Layered value-creation graph</span>
+        <h2 id="kgStageTitle">Operating picture</h2>
+        <div class="kg-legend" id="kgLegend"></div>
+      </div>
+
+      <div class="kg-cytoscape-shell">
+        <div id="kgCanvas" class="kg-cytoscape-canvas"></div>
+        <div class="kg-lane-bar" id="kgLaneBar"></div>
+        <div class="kg-graph-controls">
+          <button class="kg-icon-button" id="kgZoomIn" title="Zoom in" aria-label="Zoom in">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+          <button class="kg-icon-button" id="kgZoomOut" title="Zoom out" aria-label="Zoom out">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+          <button class="kg-icon-button" id="kgFit" title="Fit to view" aria-label="Fit to view">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+          </button>
+        </div>
+        <div class="kg-canvas-empty" id="kgCanvasEmpty">
+          <div class="kg-empty-card kg-glass">
+            <span class="kg-eyebrow">No nodes match these filters</span>
+            <h3>Clear filters to see the full graph</h3>
+            <p>The active kind toggles, lenses, or minimum-importance cut have hidden every node. Loosen one to bring the operating map back.</p>
+            <button class="kg-reset" id="kgEmptyReset">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+              Reset filters
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="kg-trail" id="kgTrail"></div>
+    </main>
+
+    <!-- ---- INSPECTOR ---- -->
+    <aside class="kg-inspector" id="kgInspector"></aside>
+
   </div>
-
-  <!-- Inspector (plain DOM) -->
-  <aside class="kg-inspector" id="kgInspector" aria-hidden="true">
-    <div class="kg-insp-head">
-      <button class="kg-insp-close" id="kgClose" aria-label="Close inspector">&times;</button>
-      <span class="kg-insp-kind" id="kgInspKind"></span>
-      <div class="kg-insp-name" id="kgInspName"></div>
-      <div class="kg-insp-subtitle" id="kgInspSubtitle"></div>
-    </div>
-    <div class="kg-insp-body" id="kgInspBody"></div>
-  </aside>
-
-  <!-- Honest footer pill -->
-  <div class="kg-foot">Prototype, demo data.</div>
 </div>
 
-<script type="module">
-/* =============================================================
-   Oktavia Portfolio - knowledge graph living constellation
-   Interactive 3D graph with the standalone 3d-force-graph engine.
-   - 3d-force-graph loaded as UMD <script> (bundles three.js)
-   - SpriteText + three loaded as ESM (esm.sh) so they share a peer
-   Self-contained: data inlined, no fetch, no build step.
-   ============================================================= */
+<script>
+/* ============================================================
+   Ported from the live app: knowledge-graph-canvas.tsx (render),
+   graph-helpers.ts (filter/search/lens/route), spatial-inspector.tsx
+   (inspector), graph-filter-rail.tsx, graph-search.tsx, and the
+   knowledge-graph-shell.tsx state machine. Demo fixture verbatim
+   from demo-graph.ts. Dagre LR layout, degree-based dim pass,
+   no node removal, no 3D.
+   ============================================================ */
 
-import SpriteText from "https://esm.sh/three-spritetext@1.10.0";
-import * as THREE from "https://esm.sh/three@0.180.0";
+(function () {
+  "use strict";
 
-/* ---- Demo data (inlined, lifted verbatim from the prior version) ---- */
-const DATA = {"nodes":[{"id":"agent:briar","kind":"agent","label":"Briar","subtitle":"Portfolio Sales Lead","body":"Authorized at every PortCo to read the CRM, pipeline, win/loss notes.","val":12},{"id":"agent:ondine","kind":"agent","label":"Ondine","subtitle":"AI Transformation Architect","body":"Models the AI-native target state for each PortCo. The lever no traditional ops partner can pull.","val":14},{"id":"agent:wren","kind":"agent","label":"Wren","subtitle":"Pricing Analyst","body":"Continuous pricing intelligence. Speaks in elasticity, designs tests.","val":11},{"id":"agent:cyan","kind":"agent","label":"Cyan","subtitle":"Procurement Aggregator","body":"Cross-portfolio procurement. Forecasted EUR 240k/yr savings on coordinated Twilio renegotiation.","val":11},{"id":"agent:marigold","kind":"agent","label":"Marigold","subtitle":"Org Design Operator","val":10},{"id":"agent:indigo","kind":"agent","label":"Indigo","subtitle":"Integration PMO","val":10},{"id":"agent:sage","kind":"agent","label":"Sage","subtitle":"Benchmarking Steward","body":"Every KPI gets contextualized as a percentile against the portfolio's same-sector subset.","val":12},{"id":"portco:halcyon","kind":"portco","label":"Halcyon Logistics","subtitle":"value_creation · €220m EV","body":"Logistics tech. AI Transformation Architect target-state model ready; dispatch is the first rebuild target.","val":16},{"id":"portco:apex","kind":"portco","label":"ApexHealth","subtitle":"value_creation · €95m EV","body":"Healthtech SaaS. Briar's ICP-tightening test in flight; CRO Karen approved.","val":13},{"id":"portco:verdant","kind":"portco","label":"Verdant SaaS","subtitle":"value_creation · €48m EV","body":"Vertical SaaS. Sage flagged 31st-percentile gross margin; cost_reduction playbook v2 recommended.","val":14},{"id":"portco:solstice","kind":"portco","label":"Solstice Energy","subtitle":"onboarding · €140m EV","val":12},{"id":"portco:tern","kind":"portco","label":"Tern Marketplace","subtitle":"harvest · €72m EV","val":11},{"id":"portco:cobalt","kind":"portco","label":"Cobalt Cyber","subtitle":"value_creation · €28m EV","val":10},{"id":"pb:cost-reduction-v2","kind":"playbook","label":"cost_reduction v2","body":"Average uplift 9pp gross margin within 18 months across 3 portfolio applications.","val":11},{"id":"pb:icp-tightening","kind":"playbook","label":"icp_tightening","body":"Forecast 18% close-rate lift, 12% deal-count drop, net 5% revenue uplift.","val":9},{"id":"pb:ai-native-rebuild-dispatch","kind":"playbook","label":"ai_native_rebuild · dispatch","body":"Sub-minute routing replaces manual dispatch. Owned by Ondine.","val":10},{"id":"pb:procurement-aggregation","kind":"playbook","label":"procurement_aggregation","val":9},{"id":"pb:org-redesign-cs","kind":"playbook","label":"org_redesign · CS","val":8},{"id":"iv:apex-icp-test","kind":"intervention","label":"ApexHealth · ICP test","subtitle":"in_flight","body":"Briar's tightening proposal, 10% cohort A/B. First results due Friday.","val":10},{"id":"iv:halcyon-dispatch-rebuild","kind":"intervention","label":"Halcyon · dispatch rebuild","subtitle":"proposed","body":"Quarter-by-quarter migration plan. PortCo CEO requested variant B (comms first).","val":11},{"id":"iv:twilio-aggregation","kind":"intervention","label":"Cross-portfolio · Twilio re-neg","subtitle":"in_flight","body":"Six PortCos coordinated. Forecast EUR 240k/yr savings. Contractor briefed.","val":9},{"id":"iv:verdant-cost-review","kind":"intervention","label":"Verdant · cost review","subtitle":"awaiting_portco","val":8},{"id":"bn:halcyon-manual-dispatch","kind":"bottleneck","label":"Manual dispatch","subtitle":"high · Halcyon","body":"14 ops staff, no real-time tracking. Gates driver utilization, ETA accuracy, ops headcount.","val":10},{"id":"bn:apex-broad-icp","kind":"bottleneck","label":"ICP too broad","subtitle":"mid · ApexHealth","val":8},{"id":"bn:verdant-gross-margin","kind":"bottleneck","label":"31st-pct gross margin","subtitle":"mid · Verdant","val":9}],"links":[{"source":"agent:ondine","target":"portco:halcyon","label":"authorized","weight":3},{"source":"agent:ondine","target":"portco:apex","label":"authorized","weight":2},{"source":"agent:ondine","target":"portco:solstice","label":"authorized","weight":2},{"source":"agent:ondine","target":"portco:verdant","label":"authorized","weight":2},{"source":"agent:briar","target":"portco:apex","label":"authorized","weight":3},{"source":"agent:briar","target":"portco:halcyon","label":"authorized","weight":2},{"source":"agent:briar","target":"portco:tern","label":"authorized","weight":1},{"source":"agent:wren","target":"portco:verdant","label":"authorized","weight":2},{"source":"agent:wren","target":"portco:cobalt","label":"authorized","weight":1},{"source":"agent:cyan","target":"portco:halcyon","label":"authorized","weight":1},{"source":"agent:cyan","target":"portco:apex","label":"authorized","weight":1},{"source":"agent:cyan","target":"portco:verdant","label":"authorized","weight":1},{"source":"agent:cyan","target":"portco:tern","label":"authorized","weight":1},{"source":"agent:cyan","target":"portco:cobalt","label":"authorized","weight":1},{"source":"agent:cyan","target":"portco:solstice","label":"authorized","weight":1},{"source":"agent:marigold","target":"portco:halcyon","label":"authorized","weight":2},{"source":"agent:marigold","target":"portco:verdant","label":"authorized","weight":1},{"source":"agent:indigo","target":"portco:verdant","label":"authorized · integration","weight":2},{"source":"agent:sage","target":"portco:verdant","label":"benchmarked","weight":2},{"source":"agent:sage","target":"portco:halcyon","label":"benchmarked","weight":1},{"source":"portco:halcyon","target":"bn:halcyon-manual-dispatch","weight":2},{"source":"portco:apex","target":"bn:apex-broad-icp","weight":2},{"source":"portco:verdant","target":"bn:verdant-gross-margin","weight":2},{"source":"bn:halcyon-manual-dispatch","target":"iv:halcyon-dispatch-rebuild","label":"triggered","weight":2},{"source":"bn:apex-broad-icp","target":"iv:apex-icp-test","label":"triggered","weight":2},{"source":"bn:verdant-gross-margin","target":"iv:verdant-cost-review","label":"triggered","weight":2},{"source":"iv:halcyon-dispatch-rebuild","target":"pb:ai-native-rebuild-dispatch","label":"uses","weight":2},{"source":"iv:apex-icp-test","target":"pb:icp-tightening","label":"uses","weight":2},{"source":"iv:twilio-aggregation","target":"pb:procurement-aggregation","label":"uses","weight":2},{"source":"iv:verdant-cost-review","target":"pb:cost-reduction-v2","label":"uses","weight":2},{"source":"pb:cost-reduction-v2","target":"portco:halcyon","label":"proven","weight":1},{"source":"pb:cost-reduction-v2","target":"portco:cobalt","label":"proven","weight":1},{"source":"pb:cost-reduction-v2","target":"portco:tern","label":"proven (exited)","weight":1},{"source":"pb:icp-tightening","target":"portco:tern","label":"proven","weight":1},{"source":"pb:procurement-aggregation","target":"portco:halcyon","label":"applied","weight":1},{"source":"pb:procurement-aggregation","target":"portco:apex","label":"applied","weight":1},{"source":"pb:procurement-aggregation","target":"portco:verdant","label":"applied","weight":1},{"source":"pb:procurement-aggregation","target":"portco:tern","label":"applied","weight":1},{"source":"pb:procurement-aggregation","target":"portco:cobalt","label":"applied","weight":1},{"source":"pb:procurement-aggregation","target":"portco:solstice","label":"applied","weight":1},{"source":"iv:twilio-aggregation","target":"portco:halcyon"},{"source":"iv:twilio-aggregation","target":"portco:apex"},{"source":"iv:twilio-aggregation","target":"portco:verdant"},{"source":"iv:twilio-aggregation","target":"portco:tern"},{"source":"iv:twilio-aggregation","target":"portco:cobalt"},{"source":"iv:twilio-aggregation","target":"portco:solstice"},{"source":"agent:cyan","target":"iv:twilio-aggregation","label":"owns","weight":2}],"kind_colors":{"agent":"#f4b942","portco":"#8b7cf7","playbook":"#5cd9b3","intervention":"#7cc4f7","bottleneck":"#f97e63"},"kind_labels":{"agent":"AI colleague","portco":"PortCo","playbook":"Playbook","intervention":"Intervention","bottleneck":"Bottleneck"}};
+  // ---- Register the dagre layout extension once ----
+  if (window.cytoscapeDagre) {
+    cytoscape.use(window.cytoscapeDagre);
+  }
 
-const KIND_COLORS = DATA.kind_colors;
-const KIND_LABELS = DATA.kind_labels;
-
-/* Lane / display order for the legend and counts. */
-const KIND_ORDER = ["agent", "portco", "bottleneck", "intervention", "playbook"];
-
-/* A node is a bright cell body if it is an agent OR its degree is high. */
-const SOMA_DEGREE = 4;
-
-/* Per-kind label typography. Agents get a serif and larger text. */
-const KIND_LABEL_FONT = {
-  agent: "Instrument Serif, serif",
-  portco: "IBM Plex Sans, sans-serif",
-  playbook: "IBM Plex Sans, sans-serif",
-  intervention: "IBM Plex Sans, sans-serif",
-  bottleneck: "IBM Plex Sans, sans-serif"
-};
-const KIND_LABEL_HEIGHT = {
-  agent: 5,
-  portco: 3.6,
-  playbook: 3.4,
-  intervention: 3.4,
-  bottleneck: 3.4
-};
-
-/* ---- Lookup tables ---- */
-const NODE_BY_ID = {};
-DATA.nodes.forEach(function (n) { NODE_BY_ID[n.id] = n; });
-
-/* ---- Small HTML escaper for inspector copy ---- */
-function escapeHtml(s) {
-  if (s === undefined || s === null) return "";
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-/* ---- Build the live count strip ---- */
-(function renderCounts() {
-  const counts = {};
-  KIND_ORDER.forEach(function (k) { counts[k] = 0; });
-  DATA.nodes.forEach(function (n) {
-    if (counts[n.kind] === undefined) counts[n.kind] = 0;
-    counts[n.kind] += 1;
-  });
-  const host = document.getElementById("kgCounts");
-  KIND_ORDER.forEach(function (k) {
-    const el = document.createElement("span");
-    el.className = "kg-count";
-    el.innerHTML =
-      '<span class="swatch" style="background:' + KIND_COLORS[k] + '"></span>' +
-      '<span class="num">' + counts[k] + '</span> ' +
-      escapeHtml(KIND_LABELS[k]) + (counts[k] === 1 ? "" : "s");
-    host.appendChild(el);
-  });
-})();
-
-/* ---- Build the always-on legend (glowing dot plus kind) ---- */
-(function renderLegend() {
-  const host = document.getElementById("kgLegend");
-  const hint = host.querySelector(".hint");
-  KIND_ORDER.forEach(function (k) {
-    const row = document.createElement("div");
-    row.className = "row";
-    row.innerHTML =
-      '<span class="dot" style="background:' + KIND_COLORS[k] + ';color:' + KIND_COLORS[k] + '"></span>' +
-      escapeHtml(KIND_LABELS[k]);
-    host.insertBefore(row, hint);
-  });
-})();
-
-/* =============================================================
-   Build the graph data the engine consumes.
-   - clone nodes/links so the engine can mutate (link.source/target
-     become object refs after graphData)
-   - attach a per-node color and val for the accessors
-   ============================================================= */
-const gNodes = DATA.nodes.map(function (n) {
-  return {
-    id: n.id,
-    kind: n.kind,
-    name: n.label,
-    subtitle: n.subtitle || "",
-    body: n.body || "",
-    val: (typeof n.val === "number" && n.val > 0) ? n.val : 1,
-    color: KIND_COLORS[n.kind] || "#9aa"
+  /* ---------- Maps (kg-types.ts + demo-graph.ts) ---------- */
+  var KIND_COLORS = {
+    agent: "#f4b942",
+    portco: "#8b7cf7",
+    playbook: "#5cd9b3",
+    intervention: "#7cc4f7",
+    bottleneck: "#f97e63",
   };
-});
-const gLinks = DATA.links.map(function (l) {
-  return { source: l.source, target: l.target, name: l.label || "", weight: l.weight || 1 };
-});
+  var KIND_LABELS = {
+    agent: "AI colleague",
+    portco: "PortCo",
+    playbook: "Playbook",
+    intervention: "Intervention",
+    bottleneck: "Bottleneck",
+  };
+  // Lane header text (HTML overlay), keyed by kind
+  var LANE_LABELS = {
+    agent: "AI colleagues",
+    portco: "PortCos",
+    bottleneck: "Value leaks",
+    intervention: "Interventions",
+    playbook: "Reusable playbooks",
+  };
+  // KIND_SHAPES from the live canvas. "round-tag" is NOT a valid Cytoscape
+  // shape and silently falls back to ellipse, so we map playbook to a real
+  // ellipse to match what renders today. We never invent "round-tag".
+  var KIND_SHAPES = {
+    agent: "ellipse",
+    portco: "round-rectangle",
+    playbook: "ellipse",
+    intervention: "round-rectangle",
+    bottleneck: "diamond",
+  };
+  var KIND_RANK = {
+    agent: 0,
+    portco: 1,
+    bottleneck: 2,
+    intervention: 3,
+    playbook: 4,
+  };
+  // Topbar/legend/lane render order
+  var NODE_KIND_ORDER = ["agent", "portco", "bottleneck", "intervention", "playbook"];
+  var ALL_KINDS = ["agent", "portco", "bottleneck", "intervention", "playbook"];
+  var LABEL_PREFIX = { agent: "AI", portco: "CO", bottleneck: "LEAK", intervention: "WORK", playbook: "PB" };
+  var HUB_COLLAPSE_DEGREE = 5;
 
-const NODE_COUNT = gNodes.length;
-const LINK_COUNT = gLinks.length;
+  /* ---------- lucide-style inline icons (graph-icons.tsx) ---------- */
+  var ICON_PATHS = {
+    // Bot
+    agent: '<rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/>',
+    // Building2
+    portco: '<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>',
+    // BookOpen
+    playbook: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2Z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7Z"/>',
+    // Flag
+    intervention: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1Z"/><line x1="4" y1="22" x2="4" y2="15"/>',
+    // AlertTriangle
+    bottleneck: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  };
+  function kindIconSvg(kind, cls) {
+    return '<svg class="' + (cls || "") + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (ICON_PATHS[kind] || "") + "</svg>";
+  }
 
-/* ---- Degree map (from the raw link ids, before the engine rewrites them) ---- */
-const degree = {};
-gNodes.forEach(function (n) { degree[n.id] = 0; });
-DATA.links.forEach(function (l) {
-  if (degree[l.source] !== undefined) degree[l.source] += 1;
-  if (degree[l.target] !== undefined) degree[l.target] += 1;
-});
-function isSoma(node) {
-  return node.kind === "agent" || (degree[node.id] || 0) >= SOMA_DEGREE;
-}
+  /* ---------- DEMO_GRAPH fixture (demo-graph.ts, verbatim) ---------- */
+  var DEMO_GRAPH = {
+    nodes: [
+      { id: "agent:briar", kind: "agent", label: "Briar", subtitle: "Portfolio Sales Lead", val: 12, body: "Authorized at every PortCo to read the CRM, pipeline, win/loss notes." },
+      { id: "agent:ondine", kind: "agent", label: "Ondine", subtitle: "AI Transformation Architect", val: 14, body: "Models the AI-native target state for each PortCo. The lever no traditional ops partner can pull." },
+      { id: "agent:wren", kind: "agent", label: "Wren", subtitle: "Pricing Analyst", val: 11, body: "Continuous pricing intelligence. Speaks in elasticity, designs tests." },
+      { id: "agent:cyan", kind: "agent", label: "Cyan", subtitle: "Procurement Aggregator", val: 11, body: "Cross-portfolio procurement. Forecasted EUR 240k/yr savings on coordinated Twilio renegotiation." },
+      { id: "agent:marigold", kind: "agent", label: "Marigold", subtitle: "Org Design Operator", val: 10 },
+      { id: "agent:indigo", kind: "agent", label: "Indigo", subtitle: "Integration PMO", val: 10 },
+      { id: "agent:sage", kind: "agent", label: "Sage", subtitle: "Benchmarking Steward", val: 12, body: "Every KPI gets contextualized as a percentile against the portfolio's same-sector subset." },
+      { id: "portco:halcyon", kind: "portco", label: "Halcyon Logistics", subtitle: "value_creation · €220m EV", val: 16, body: "Logistics tech. AI Transformation Architect target-state model ready; dispatch is the first rebuild target." },
+      { id: "portco:apex", kind: "portco", label: "ApexHealth", subtitle: "value_creation · €95m EV", val: 13, body: "Healthtech SaaS. Briar's ICP-tightening test in flight; CRO Karen approved." },
+      { id: "portco:verdant", kind: "portco", label: "Verdant SaaS", subtitle: "value_creation · €48m EV", val: 14, body: "Vertical SaaS. Sage flagged 31st-percentile gross margin; cost_reduction playbook v2 recommended." },
+      { id: "portco:solstice", kind: "portco", label: "Solstice Energy", subtitle: "onboarding · €140m EV", val: 12 },
+      { id: "portco:tern", kind: "portco", label: "Tern Marketplace", subtitle: "harvest · €72m EV", val: 11 },
+      { id: "portco:cobalt", kind: "portco", label: "Cobalt Cyber", subtitle: "value_creation · €28m EV", val: 10 },
+      { id: "pb:cost-reduction-v2", kind: "playbook", label: "cost_reduction v2", val: 11, body: "Average uplift 9pp gross margin within 18 months across 3 portfolio applications." },
+      { id: "pb:icp-tightening", kind: "playbook", label: "icp_tightening", val: 9, body: "Forecast 18% close-rate lift, 12% deal-count drop, net 5% revenue uplift." },
+      { id: "pb:ai-native-rebuild-dispatch", kind: "playbook", label: "ai_native_rebuild · dispatch", val: 10, body: "Sub-minute routing replaces manual dispatch. Owned by Ondine." },
+      { id: "pb:procurement-aggregation", kind: "playbook", label: "procurement_aggregation", val: 9 },
+      { id: "pb:org-redesign-cs", kind: "playbook", label: "org_redesign · CS", val: 8 },
+      { id: "iv:apex-icp-test", kind: "intervention", label: "ApexHealth · ICP test", subtitle: "in_flight", val: 10, body: "Briar's tightening proposal, 10% cohort A/B. First results due Friday." },
+      { id: "iv:halcyon-dispatch-rebuild", kind: "intervention", label: "Halcyon · dispatch rebuild", subtitle: "proposed", val: 11, body: "Quarter-by-quarter migration plan. PortCo CEO requested variant B (comms first)." },
+      { id: "iv:twilio-aggregation", kind: "intervention", label: "Cross-portfolio · Twilio re-neg", subtitle: "in_flight", val: 9, body: "Six PortCos coordinated. Forecast EUR 240k/yr savings. Contractor briefed." },
+      { id: "iv:verdant-cost-review", kind: "intervention", label: "Verdant · cost review", subtitle: "awaiting_portco", val: 8 },
+      { id: "bn:halcyon-manual-dispatch", kind: "bottleneck", label: "Manual dispatch", subtitle: "high · Halcyon", val: 10, body: "14 ops staff, no real-time tracking. Gates driver utilization, ETA accuracy, ops headcount." },
+      { id: "bn:apex-broad-icp", kind: "bottleneck", label: "ICP too broad", subtitle: "mid · ApexHealth", val: 8 },
+      { id: "bn:verdant-gross-margin", kind: "bottleneck", label: "31st-pct gross margin", subtitle: "mid · Verdant", val: 9 },
+    ],
+    links: [
+      { source: "agent:ondine", target: "portco:halcyon", label: "authorized", weight: 3 },
+      { source: "agent:ondine", target: "portco:apex", label: "authorized", weight: 2 },
+      { source: "agent:ondine", target: "portco:solstice", label: "authorized", weight: 2 },
+      { source: "agent:ondine", target: "portco:verdant", label: "authorized", weight: 2 },
+      { source: "agent:briar", target: "portco:apex", label: "authorized", weight: 3 },
+      { source: "agent:briar", target: "portco:halcyon", label: "authorized", weight: 2 },
+      { source: "agent:briar", target: "portco:tern", label: "authorized", weight: 1 },
+      { source: "agent:wren", target: "portco:verdant", label: "authorized", weight: 2 },
+      { source: "agent:wren", target: "portco:cobalt", label: "authorized", weight: 1 },
+      { source: "agent:cyan", target: "portco:halcyon", label: "authorized", weight: 1 },
+      { source: "agent:cyan", target: "portco:apex", label: "authorized", weight: 1 },
+      { source: "agent:cyan", target: "portco:verdant", label: "authorized", weight: 1 },
+      { source: "agent:cyan", target: "portco:tern", label: "authorized", weight: 1 },
+      { source: "agent:cyan", target: "portco:cobalt", label: "authorized", weight: 1 },
+      { source: "agent:cyan", target: "portco:solstice", label: "authorized", weight: 1 },
+      { source: "agent:marigold", target: "portco:halcyon", label: "authorized", weight: 2 },
+      { source: "agent:marigold", target: "portco:verdant", label: "authorized", weight: 1 },
+      { source: "agent:indigo", target: "portco:verdant", label: "authorized · integration", weight: 2 },
+      { source: "agent:sage", target: "portco:verdant", label: "benchmarked", weight: 2 },
+      { source: "agent:sage", target: "portco:halcyon", label: "benchmarked", weight: 1 },
+      { source: "portco:halcyon", target: "bn:halcyon-manual-dispatch", weight: 2 },
+      { source: "portco:apex", target: "bn:apex-broad-icp", weight: 2 },
+      { source: "portco:verdant", target: "bn:verdant-gross-margin", weight: 2 },
+      { source: "bn:halcyon-manual-dispatch", target: "iv:halcyon-dispatch-rebuild", label: "triggered", weight: 2 },
+      { source: "bn:apex-broad-icp", target: "iv:apex-icp-test", label: "triggered", weight: 2 },
+      { source: "bn:verdant-gross-margin", target: "iv:verdant-cost-review", label: "triggered", weight: 2 },
+      { source: "iv:halcyon-dispatch-rebuild", target: "pb:ai-native-rebuild-dispatch", label: "uses", weight: 2 },
+      { source: "iv:apex-icp-test", target: "pb:icp-tightening", label: "uses", weight: 2 },
+      { source: "iv:twilio-aggregation", target: "pb:procurement-aggregation", label: "uses", weight: 2 },
+      { source: "iv:verdant-cost-review", target: "pb:cost-reduction-v2", label: "uses", weight: 2 },
+      { source: "pb:cost-reduction-v2", target: "portco:halcyon", label: "proven", weight: 1 },
+      { source: "pb:cost-reduction-v2", target: "portco:cobalt", label: "proven", weight: 1 },
+      { source: "pb:cost-reduction-v2", target: "portco:tern", label: "proven (exited)", weight: 1 },
+      { source: "pb:icp-tightening", target: "portco:tern", label: "proven", weight: 1 },
+      { source: "pb:procurement-aggregation", target: "portco:halcyon", label: "applied", weight: 1 },
+      { source: "pb:procurement-aggregation", target: "portco:apex", label: "applied", weight: 1 },
+      { source: "pb:procurement-aggregation", target: "portco:verdant", label: "applied", weight: 1 },
+      { source: "pb:procurement-aggregation", target: "portco:tern", label: "applied", weight: 1 },
+      { source: "pb:procurement-aggregation", target: "portco:cobalt", label: "applied", weight: 1 },
+      { source: "pb:procurement-aggregation", target: "portco:solstice", label: "applied", weight: 1 },
+      { source: "iv:twilio-aggregation", target: "portco:halcyon" },
+      { source: "iv:twilio-aggregation", target: "portco:apex" },
+      { source: "iv:twilio-aggregation", target: "portco:verdant" },
+      { source: "iv:twilio-aggregation", target: "portco:tern" },
+      { source: "iv:twilio-aggregation", target: "portco:cobalt" },
+      { source: "iv:twilio-aggregation", target: "portco:solstice" },
+      { source: "agent:cyan", target: "iv:twilio-aggregation", label: "owns", weight: 2 },
+    ],
+  };
 
-/* ---- Neighbor adjacency (by id) for hover and highlight ---- */
-const neighborIds = {};
-const linkPairKey = {};   // "src|tgt" -> true, undirected membership test
-gNodes.forEach(function (n) { neighborIds[n.id] = new Set(); });
-DATA.links.forEach(function (l) {
-  if (neighborIds[l.source]) neighborIds[l.source].add(l.target);
-  if (neighborIds[l.target]) neighborIds[l.target].add(l.source);
-  linkPairKey[l.source + "|" + l.target] = true;
-});
+  /* ---------- LENSES (graph-filter-rail.tsx, verbatim) ---------- */
+  var LENSES = [
+    { id: "at_risk", name: "At-risk PortCos", desc: "Problems, blocked work, and degraded signals." },
+    { id: "open_leaks", name: "Open value leaks", desc: "Bottlenecks and active interventions." },
+    { id: "approved", name: "Approved work", desc: "Plans ready or already in flight." },
+    { id: "reuse", name: "Cross-portfolio reuse", desc: "Playbooks and comparable wins." },
+    { id: "awaiting", name: "Awaiting owner", desc: "Work waiting on a human or PortCo response." },
+  ];
 
-/* =============================================================
-   Glow textures: a core gradient and a wide soft halo gradient.
-   Cached per color so we build each canvas once.
-   ============================================================= */
-const coreTexCache = new Map();
-const haloTexCache = new Map();
-
-function hexToRgb(hex) {
-  let h = String(hex).replace("#", "");
-  if (h.length === 3) h = h.split("").map(function (c) { return c + c; }).join("");
-  const n = parseInt(h, 16);
-  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
-}
-function rgba(hex, a) {
-  const c = hexToRgb(hex);
-  return "rgba(" + c.r + "," + c.g + "," + c.b + "," + a + ")";
-}
-
-function makeCoreTexture(hex) {
-  if (coreTexCache.has(hex)) return coreTexCache.get(hex);
-  const size = 128;
-  const c = document.createElement("canvas"); c.width = c.height = size;
-  const ctx = c.getContext("2d");
-  const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-  g.addColorStop(0.00, "rgba(255,250,240,1.00)");
-  g.addColorStop(0.14, "rgba(255,250,240,0.95)");
-  g.addColorStop(0.34, rgba(hex, 0.72));
-  g.addColorStop(0.68, rgba(hex, 0.16));
-  g.addColorStop(1.00, rgba(hex, 0.00));
-  ctx.fillStyle = g; ctx.fillRect(0, 0, size, size);
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  coreTexCache.set(hex, tex);
-  return tex;
-}
-function makeHaloTexture(hex) {
-  if (haloTexCache.has(hex)) return haloTexCache.get(hex);
-  const size = 128;
-  const c = document.createElement("canvas"); c.width = c.height = size;
-  const ctx = c.getContext("2d");
-  const g = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-  g.addColorStop(0.00, "rgba(255,250,240,0.16)");
-  g.addColorStop(0.22, rgba(hex, 0.36));
-  g.addColorStop(0.58, rgba(hex, 0.14));
-  g.addColorStop(1.00, rgba(hex, 0.00));
-  ctx.fillStyle = g; ctx.fillRect(0, 0, size, size);
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  haloTexCache.set(hex, tex);
-  return tex;
-}
-
-/* A small soft round texture used for the edge photons. */
-let photonTex = null;
-function makePhotonTexture() {
-  if (photonTex) return photonTex;
-  const size = 64;
-  const c = document.createElement("canvas"); c.width = c.height = size;
-  const ctx = c.getContext("2d");
-  const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-  g.addColorStop(0.0, "rgba(255,245,220,1.0)");
-  g.addColorStop(0.4, "rgba(255,225,170,0.55)");
-  g.addColorStop(1.0, "rgba(255,225,170,0.0)");
-  ctx.fillStyle = g; ctx.fillRect(0, 0, size, size);
-  photonTex = new THREE.CanvasTexture(c);
-  photonTex.colorSpace = THREE.SRGBColorSpace;
-  return photonTex;
-}
-
-/* Node visual radius. Cube-root of val, agents floored so they stay bright bodies. */
-function nodeRadius(node) {
-  let r = Math.cbrt(node.val) * 3.35;
-  if (node.kind === "agent" && r < 5.8) r = 5.8;
-  return r;
-}
-
-/* =============================================================
-   nodeThreeObject: a Group of
-     1) invisible raycast proxy sphere (the only thing the cursor hits)
-     2) additive core glow sprite
-     3) additive wide halo sprite
-     4) an additive accent ring for agents
-     5) a persistent SpriteText label, always visible
-   ============================================================= */
-function buildNodeObject(node) {
-  const group = new THREE.Group();
-  group.userData.kgNode = node;
-
-  const radius = nodeRadius(node);
-  const soma = isSoma(node);
-  const hex = node.color;
-
-  // 1) raycast proxy (invisible, generous hit area)
-  const proxyGeo = new THREE.SphereGeometry(radius, 16, 16);
-  const proxyMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false });
-  const proxy = new THREE.Mesh(proxyGeo, proxyMat);
-  group.add(proxy);
-
-  // 2) core glow sprite
-  const coreMat = new THREE.SpriteMaterial({
-    map: makeCoreTexture(hex),
-    color: 0xffffff,
-    blending: THREE.AdditiveBlending,
-    transparent: true,
-    depthWrite: false
-  });
-  const core = new THREE.Sprite(coreMat);
-  const coreScale = radius * (soma ? 1.6 : 1.1);
-  core.scale.set(coreScale, coreScale, 1);
-  coreMat.opacity = soma ? 0.98 : 0.88;
-  core.userData.baseOpacity = coreMat.opacity;
-  core.userData.baseScale = coreScale;
-  core.userData.isSoma = soma;
-  group.add(core);
-  group.userData.core = core;
-
-  // 3) halo glow sprite (wide and faint = the bloom)
-  const haloMat = new THREE.SpriteMaterial({
-    map: makeHaloTexture(hex),
-    color: 0xffffff,
-    blending: THREE.AdditiveBlending,
-    transparent: true,
-    depthWrite: false
-  });
-  const halo = new THREE.Sprite(haloMat);
-  const haloScale = radius * (soma ? 4.0 : 3.0);
-  halo.scale.set(haloScale, haloScale, 1);
-  haloMat.opacity = soma ? 0.72 : 0.56;
-  group.add(halo);
-  group.userData.halo = halo;
-  group.userData.haloBaseOpacity = haloMat.opacity;
-
-  // 4) accent ring for agents (the clearest "special node" signal)
-  if (node.kind === "agent") {
-    const ringOuter = coreScale * 0.62;
-    const ringGeo = new THREE.RingGeometry(ringOuter * 0.78, ringOuter, 48);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: new THREE.Color(hex),
-      blending: THREE.AdditiveBlending,
-      transparent: true,
-      opacity: 0.72,
-      side: THREE.DoubleSide,
-      depthWrite: false
+  /* ---------- graph-helpers.ts ports ---------- */
+  function endpointId(end) {
+    return typeof end === "string" ? end : (end && end.id) || "";
+  }
+  function nodeText(node) {
+    return [node.label, node.subtitle || "", node.body || "", node.kind, node.id].join(" ").toLowerCase();
+  }
+  // incident link labels for lens matching
+  function incidentLabels(node, links) {
+    var out = [];
+    for (var i = 0; i < links.length; i++) {
+      var s = endpointId(links[i].source), t = endpointId(links[i].target);
+      if (s === node.id || t === node.id) out.push((links[i].label || "").toLowerCase());
+    }
+    return out.join(" ");
+  }
+  function nodeMatchesLens(node, lens, links) {
+    var text = nodeText(node);
+    var rel = incidentLabels(node, links);
+    var hay = text + " " + rel;
+    switch (lens) {
+      case "at_risk":
+        return node.kind === "bottleneck" || /risk|drift|blocked|degradation|high|leak|margin|churn/i.test(hay);
+      case "open_leaks":
+        return node.kind === "bottleneck" || (node.kind === "intervention" && /proposed|approved|in[_ -]?flight|awaiting/i.test(hay));
+      case "approved":
+        return node.kind === "intervention" && /approved|in[_ -]?flight/i.test(hay);
+      case "reuse":
+        return node.kind === "playbook" || /portfolio|reuse|proven|match|aggregation|cross/i.test(hay);
+      case "awaiting":
+        return /awaiting|owner|approval|human|response|gate|waiting/i.test(hay);
+      default:
+        return false;
+    }
+  }
+  function buildDegreeMap(data) {
+    var map = {};
+    data.nodes.forEach(function (n) { map[n.id] = 0; });
+    data.links.forEach(function (l) {
+      var s = endpointId(l.source), t = endpointId(l.target);
+      if (s === t) { if (map[s] != null) map[s] += 1; return; }
+      if (map[s] != null) map[s] += 1;
+      if (map[t] != null) map[t] += 1;
     });
-    const ring = new THREE.Mesh(ringGeo, ringMat);
-    // Sprites always face the camera; the ring is flat, so let the engine
-    // orient it loosely. It reads as a halo ring from most angles.
-    group.add(ring);
+    return map;
   }
-
-  // 5) persistent label (always on)
-  const label = new SpriteText(node.name);
-  label.color = "#f4f2ea";
-  label.backgroundColor = "rgba(13,17,33,0.78)";
-  label.padding = 4;
-  label.borderRadius = 4;
-  label.fontWeight = "500";
-  label.fontFace = KIND_LABEL_FONT[node.kind] || "IBM Plex Sans, sans-serif";
-  label.textHeight = KIND_LABEL_HEIGHT[node.kind] || 3.4;
-  label.material.depthWrite = false;
-  label.visible = true;
-  label.position.set(0, haloScale * 0.42 + 3.5, 0);
-  group.add(label);
-
-  return group;
-}
-
-/* =============================================================
-   Edge styling tiers. Returns color/opacity/photon params per link
-   based on hover and selection state. Priority order matters.
-   ============================================================= */
-function linkTouchesHighlight(link) {
-  if (!highlightSet.size) return false;
-  const s = link.source.id || link.source;
-  const t = link.target.id || link.target;
-  return highlightSet.has(s) && highlightSet.has(t);
-}
-function linkTouchesNode(link, nodeId) {
-  if (!nodeId) return false;
-  const s = link.source.id || link.source;
-  const t = link.target.id || link.target;
-  return s === nodeId || t === nodeId;
-}
-function linkSomaTouch(link) {
-  const s = link.source.id || link.source;
-  const t = link.target.id || link.target;
-  const ns = NODE_BY_ID[s], nt = NODE_BY_ID[t];
-  return (ns && (ns.kind === "agent" || (degree[s] || 0) >= SOMA_DEGREE)) ||
-         (nt && (nt.kind === "agent" || (degree[t] || 0) >= SOMA_DEGREE));
-}
-
-/* Deterministic hash so the ~33% photon subset and speeds are stable. */
-function hashStr(s) {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; }
-  return h >>> 0;
-}
-function linkHash(link) {
-  const s = link.source.id || link.source;
-  const t = link.target.id || link.target;
-  return hashStr(s + ">" + t);
-}
-function plainPhotonOn(link) {
-  // about a third of plain edges carry a photon, plus all soma-touching edges
-  if (linkSomaTouch(link)) return true;
-  return (linkHash(link) % 3) === 0;
-}
-
-/* ---- Engine instance ---- */
-const elGraph = document.getElementById("kgGraph");
-const Graph = new ForceGraph3D(elGraph, { controlType: "orbit", rendererConfig: { antialias: true, alpha: true, powerPreference: "high-performance" } });
-
-let hoverNodeId = null;
-let selectedId = null;
-let highlightSet = new Set();    // ids in the currently highlighted neighborhood
-
-Graph
-  .backgroundColor("#0a0e1c")
-  .graphData({ nodes: gNodes, links: gLinks })
-  .nodeRelSize(4)
-  .nodeVal(function (n) { return n.val; })
-  .nodeLabel(function (n) { return ""; })  // we use persistent SpriteText, not the HTML tooltip
-  .nodeThreeObject(buildNodeObject)
-  .nodeThreeObjectExtend(false)            // replace the default sphere (we draw our own proxy)
-  .linkLabel(function (l) { return l.name || ""; })
-  .linkColor(linkColor)
-  .linkOpacity(0.34)
-  .linkWidth(linkWidth)
-  .linkDirectionalParticles(linkParticles)
-  .linkDirectionalParticleColor(linkParticleColor)
-  .linkDirectionalParticleWidth(1.6)
-  .linkDirectionalParticleSpeed(0.006)
-  .onNodeClick(onNodeClick)
-  .onNodeHover(onNodeHover)
-  .onBackgroundClick(deselect)
-  .d3VelocityDecay(0.32)
-  .d3AlphaDecay(0.02)
-  .warmupTicks(60)
-  .cooldownTicks(400);
-
-/* ---- Link accessor functions (state-aware) ---- */
-function linkColor(link) {
-  const hovered = hoverNodeId && linkTouchesNode(link, hoverNodeId);
-  if (hovered || linkTouchesHighlight(link)) return "#ffd578";      // focused: gold
-  if (highlightSet.size && !linkTouchesHighlight(link)) return rgba("#3a4a66", 0.10); // dim others
-  if (linkSomaTouch(link)) return rgba("#f4b942", 0.42);            // resting soma edge: amber
-  return rgba("#d8cab4", 0.28);                                     // resting plain: muted
-}
-function linkWidth(link) {
-  const hovered = hoverNodeId && linkTouchesNode(link, hoverNodeId);
-  if (hovered || linkTouchesHighlight(link)) return 1.4;
-  return 0.5;
-}
-function linkParticles(link) {
-  const hovered = hoverNodeId && linkTouchesNode(link, hoverNodeId);
-  if (hovered || linkTouchesHighlight(link)) return 4;
-  if (highlightSet.size && !linkTouchesHighlight(link)) return 0;   // mute the rest
-  return plainPhotonOn(link) ? 2 : 0;
-}
-function linkParticleColor(link) {
-  const hovered = hoverNodeId && linkTouchesNode(link, hoverNodeId);
-  if (hovered || linkTouchesHighlight(link)) return "#fff2cc";
-  return "#ffd9a0";
-}
-
-/* =============================================================
-   Hover: brighten the 1-hop neighborhood, dim the rest. Re-apply
-   accessors by calling them again so the engine restyles links.
-   ============================================================= */
-function onNodeHover(node) {
-  const id = node ? node.id : null;
-  if (id === hoverNodeId) return;
-  hoverNodeId = id;
-  document.body.style.cursor = node ? "pointer" : "";
-  refreshLinkStyles();
-  applyNodeEmphasis();
-}
-
-/* Recompute the visual emphasis on every node group based on hover/selection. */
-function applyNodeEmphasis() {
-  // Which ids are "lit": selection neighborhood wins; otherwise hover neighborhood.
-  let lit = null;
-  if (highlightSet.size) lit = highlightSet;
-  else if (hoverNodeId) {
-    lit = new Set([hoverNodeId]);
-    neighborIds[hoverNodeId].forEach(function (x) { lit.add(x); });
+  function countByKind(nodes) {
+    var c = { agent: 0, portco: 0, playbook: 0, intervention: 0, bottleneck: 0 };
+    nodes.forEach(function (n) { c[n.kind] = (c[n.kind] || 0) + 1; });
+    return c;
   }
-
-  Graph.graphData().nodes.forEach(function (n) {
-    const grp = n.__threeObj;
-    if (!grp) return;
-    const core = grp.userData.core;
-    const halo = grp.userData.halo;
-    if (!core || !halo) return;
-
-    let mul = 1.0;          // brightness multiplier
-    if (lit) mul = lit.has(n.id) ? 1.0 : 0.22;
-
-    core.material.opacity = core.userData.baseOpacity * mul;
-    halo.material.opacity = grp.userData.haloBaseOpacity * mul;
-  });
-}
-
-/* Force the link accessors to re-evaluate by re-setting them. */
-function refreshLinkStyles() {
-  Graph
-    .linkColor(linkColor)
-    .linkWidth(linkWidth)
-    .linkDirectionalParticles(linkParticles)
-    .linkDirectionalParticleColor(linkParticleColor);
-}
-
-/* =============================================================
-   Click: fly the camera to frame the node, build the highlight set
-   (node + 1-hop), open the inspector.
-   ============================================================= */
-function onNodeClick(node) {
-  if (!node) return;
-  flyTo(node);
-  selectedId = node.id;
-  highlightSet = new Set([node.id]);
-  neighborIds[node.id].forEach(function (x) { highlightSet.add(x); });
-  refreshLinkStyles();
-  applyNodeEmphasis();
-  openInspector(node.id);
-  // pause auto-rotate while focused
-  pauseAutoRotate();
-}
-
-function flyTo(node) {
-  const dist = 120;
-  const d = Math.hypot(node.x || 0, node.y || 0, node.z || 0) || 1;
-  const r = 1 + dist / d;
-  Graph.cameraPosition(
-    { x: (node.x || 0) * r, y: (node.y || 0) * r, z: (node.z || 0) * r },
-    { x: node.x || 0, y: node.y || 0, z: node.z || 0 },
-    1400
-  );
-}
-
-function deselect() {
-  selectedId = null;
-  highlightSet = new Set();
-  refreshLinkStyles();
-  applyNodeEmphasis();
-  closeInspector();
-  resumeAutoRotateSoon();
-}
-
-/* Reset view: deselect and zoom to fit the whole graph. */
-function resetView() {
-  deselect();
-  Graph.zoomToFit(900, 60);
-}
-
-/* =============================================================
-   Inspector (plain DOM). Name, kind, subtitle, body, grouped
-   clickable connections that re-focus the chosen node.
-   ============================================================= */
-function openInspector(id) {
-  const n = NODE_BY_ID[id];
-  if (!n) return;
-
-  const insp = document.getElementById("kgInspector");
-  const app = document.getElementById("kgApp");
-  const color = KIND_COLORS[n.kind] || "#9aa";
-
-  document.getElementById("kgInspKind").innerHTML =
-    '<span class="dot" style="background:' + color + '"></span>' + escapeHtml(KIND_LABELS[n.kind] || n.kind);
-  document.getElementById("kgInspName").textContent = n.label;
-  const sub = document.getElementById("kgInspSubtitle");
-  if (n.subtitle) { sub.textContent = n.subtitle; sub.style.display = ""; }
-  else { sub.style.display = "none"; }
-
-  const body = document.getElementById("kgInspBody");
-  let html = "";
-  if (n.body) html += '<p class="copy">' + escapeHtml(n.body) + "</p>";
-  else html += '<p class="empty">No description on this node yet.</p>';
-
-  const out = [];
-  const inc = [];
-  DATA.links.forEach(function (l) {
-    if (l.source === id) out.push({ otherId: l.target, rel: l.label || "linked" });
-    if (l.target === id) inc.push({ otherId: l.source, rel: l.label || "linked" });
-  });
-
-  html += renderConnGroup("Connects to", out);
-  html += renderConnGroup("Connected from", inc);
-  if (out.length === 0 && inc.length === 0) {
-    html += '<p class="empty">No connections in this view.</p>';
-  }
-
-  body.innerHTML = html;
-
-  Array.prototype.forEach.call(body.querySelectorAll(".kg-conn"), function (btn) {
-    btn.addEventListener("click", function () {
-      const otherId = btn.getAttribute("data-id");
-      const target = NODE_BY_ID[otherId];
-      const liveNode = Graph.graphData().nodes.find(function (x) { return x.id === otherId; });
-      if (liveNode) onNodeClick(liveNode);
+  function searchGraph(data, query, degreeMap) {
+    var q = query.trim().toLowerCase();
+    if (!q) return [];
+    var scored = [];
+    data.nodes.forEach(function (n) {
+      var hay = nodeText(n);
+      var label = n.label.toLowerCase();
+      var score = 0;
+      if (label.indexOf(q) !== -1) score += 30;
+      if (hay.indexOf(q) !== -1) score += 18;
+      if (label.indexOf(q) === 0) score += 12;
+      score += degreeMap[n.id] || 0;
+      if (score > 0) scored.push({ node: n, score: score });
     });
-  });
-
-  insp.classList.add("is-open");
-  insp.setAttribute("aria-hidden", "false");
-  app.classList.add("insp-open");
-}
-
-function renderConnGroup(title, list) {
-  if (!list.length) return "";
-  let html = '<div class="kg-conn-group"><h5>' + escapeHtml(title) + " (" + list.length + ")</h5>";
-  list.forEach(function (c) {
-    const other = NODE_BY_ID[c.otherId];
-    if (!other) return;
-    const color = KIND_COLORS[other.kind] || "#9aa";
-    html +=
-      '<button class="kg-conn" type="button" data-id="' + escapeHtml(other.id) + '">' +
-        '<span class="dot" style="background:' + color + '"></span>' +
-        '<span class="label">' + escapeHtml(other.label) + "</span>" +
-        '<span class="rel">' + escapeHtml(c.rel) + "</span>" +
-      "</button>";
-  });
-  html += "</div>";
-  return html;
-}
-
-function closeInspector() {
-  const insp = document.getElementById("kgInspector");
-  insp.classList.remove("is-open");
-  insp.setAttribute("aria-hidden", "true");
-  document.getElementById("kgApp").classList.remove("insp-open");
-}
-
-document.getElementById("kgClose").addEventListener("click", deselect);
-document.getElementById("kgReset").addEventListener("click", resetView);
-
-/* =============================================================
-   Search: type-ahead. Selecting a result flies the camera and
-   opens the inspector.
-   ============================================================= */
-(function wireSearch() {
-  const input = document.getElementById("kgSearch");
-  const suggest = document.getElementById("kgSuggest");
-  let activeIdx = -1;
-  let matches = [];
-
-  function close() {
-    suggest.classList.remove("is-open");
-    suggest.innerHTML = "";
-    activeIdx = -1;
-    matches = [];
-  }
-
-  function pick(id) {
-    input.value = NODE_BY_ID[id] ? NODE_BY_ID[id].label : "";
-    close();
-    const liveNode = Graph.graphData().nodes.find(function (x) { return x.id === id; });
-    if (liveNode) onNodeClick(liveNode);
-  }
-
-  function render(q) {
-    const needle = q.trim().toLowerCase();
-    if (!needle) { close(); return; }
-    matches = DATA.nodes.filter(function (n) {
-      return n.label.toLowerCase().indexOf(needle) !== -1 ||
-             (n.subtitle && n.subtitle.toLowerCase().indexOf(needle) !== -1);
-    }).slice(0, 8);
-
-    if (!matches.length) { close(); return; }
-
-    suggest.innerHTML = "";
-    matches.forEach(function (n, i) {
-      const li = document.createElement("li");
-      li.setAttribute("role", "option");
-      li.setAttribute("data-id", n.id);
-      if (i === activeIdx) li.classList.add("is-active");
-      li.innerHTML =
-        '<span class="dot" style="background:' + (KIND_COLORS[n.kind] || "#9aa") + '"></span>' +
-        escapeHtml(n.label) +
-        '<span class="k">' + escapeHtml(KIND_LABELS[n.kind] || n.kind) + "</span>";
-      li.addEventListener("click", function () { pick(n.id); });
-      suggest.appendChild(li);
+    scored.sort(function (a, b) {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.node.label.localeCompare(b.node.label);
     });
-    suggest.classList.add("is-open");
+    return scored.map(function (s) { return s.node; });
   }
+  function filterGraph(data, filters, query, selectedId) {
+    var byId = {};
+    data.nodes.forEach(function (n) { byId[n.id] = n; });
+    var degreeMap = buildDegreeMap(data);
 
-  input.addEventListener("input", function () { activeIdx = -1; render(input.value); });
-  input.addEventListener("focus", function () { if (input.value) render(input.value); });
+    function kindOk(n) { return filters.activeKinds.has(n.kind) && n.val >= filters.importanceCut; }
 
-  input.addEventListener("keydown", function (e) {
-    if (!matches.length) {
-      if (e.key === "Enter" && input.value.trim()) {
-        const needle = input.value.trim().toLowerCase();
-        const hit = DATA.nodes.find(function (n) {
-          return n.label.toLowerCase().indexOf(needle) !== -1;
-        });
-        if (hit) pick(hit.id);
+    // base set: kind + importance
+    var included = {};
+    data.nodes.forEach(function (n) { if (kindOk(n)) included[n.id] = true; });
+
+    var q = (query || "").trim();
+    var hasLens = filters.activeLenses.size > 0;
+
+    if (q || hasLens) {
+      var seed = {};
+      if (q) {
+        var hits = searchGraph(data, q, degreeMap).slice(0, 12);
+        hits.forEach(function (n) { seed[n.id] = true; });
       }
+      if (hasLens) {
+        data.nodes.forEach(function (n) {
+          var match = false;
+          filters.activeLenses.forEach(function (lens) {
+            if (nodeMatchesLens(n, lens, data.links)) match = true;
+          });
+          if (match) seed[n.id] = true;
+        });
+      }
+      // restrict included to seed (still gated by kind + importance)
+      var restricted = {};
+      Object.keys(included).forEach(function (id) { if (seed[id]) restricted[id] = true; });
+      included = restricted;
+
+      // one-hop expansion off seed nodes (gated by kind + importance)
+      data.links.forEach(function (l) {
+        var s = endpointId(l.source), t = endpointId(l.target);
+        if (included[s] && byId[t] && kindOk(byId[t])) included[t] = true;
+        if (included[t] && byId[s] && kindOk(byId[s])) included[s] = true;
+      });
+    }
+
+    // force-include selected + direct neighbors so the inspector subject never vanishes
+    if (selectedId && byId[selectedId]) {
+      included[selectedId] = true;
+      data.links.forEach(function (l) {
+        var s = endpointId(l.source), t = endpointId(l.target);
+        if (s === selectedId && byId[t]) included[t] = true;
+        if (t === selectedId && byId[s]) included[s] = true;
+      });
+    }
+
+    var nodes = data.nodes.filter(function (n) { return included[n.id]; });
+    nodes.sort(function (a, b) {
+      if (KIND_RANK[a.kind] !== KIND_RANK[b.kind]) return KIND_RANK[a.kind] - KIND_RANK[b.kind];
+      return a.label.localeCompare(b.label);
+    });
+    var links = data.links.filter(function (l) {
+      return included[endpointId(l.source)] && included[endpointId(l.target)];
+    });
+    return { nodes: nodes, links: links };
+  }
+  function connectionsFor(nodeId, data) {
+    var byId = {};
+    data.nodes.forEach(function (n) { byId[n.id] = n; });
+    var out = [];
+    data.links.forEach(function (l) {
+      var s = endpointId(l.source), t = endpointId(l.target);
+      if (s === nodeId && byId[t]) out.push({ node: byId[t], label: l.label, direction: "out" });
+      else if (t === nodeId && byId[s]) out.push({ node: byId[s], label: l.label, direction: "in" });
+    });
+    out.sort(function (a, b) {
+      if (KIND_RANK[a.node.kind] !== KIND_RANK[b.node.kind]) return KIND_RANK[a.node.kind] - KIND_RANK[b.node.kind];
+      return a.node.label.localeCompare(b.node.label);
+    });
+    return out;
+  }
+  function defaultFocusNode(data, currentId) {
+    if (currentId && data.nodes.some(function (n) { return n.id === currentId; })) return currentId;
+    var degreeMap = buildDegreeMap(data);
+    var kindWeight = { portco: 24, bottleneck: 22, intervention: 18, agent: 8, playbook: 7 };
+    var best = null, bestScore = -Infinity;
+    data.nodes.forEach(function (n) {
+      var score = (kindWeight[n.kind] || 0) + n.val * 2 + (degreeMap[n.id] || 0) * 6;
+      if (score > bestScore) { bestScore = score; best = n.id; }
+    });
+    return best;
+  }
+  function summarizeGraph(data) {
+    var attention = 0, active = 0, reusable = 0, awaiting = 0;
+    data.nodes.forEach(function (n) {
+      if (nodeMatchesLens(n, "at_risk", data.links)) attention += 1;
+      if (n.kind === "intervention" && /approved|in[_ -]?flight|proposed/i.test(nodeText(n))) active += 1;
+      if (n.kind === "playbook" || nodeMatchesLens(n, "reuse", data.links)) reusable += 1;
+      if (nodeMatchesLens(n, "awaiting", data.links)) awaiting += 1;
+    });
+    return { attentionNodes: attention, activeInterventions: active, reusablePlaybooks: reusable, awaitingOwners: awaiting };
+  }
+
+  /* ---------- routeForNode (only portco/agent/intervention routable) ---------- */
+  var UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  function slugify(s) { return (s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""); }
+  var AGENT_ROLE = {
+    briar: "portfolio-sales-lead", "portfolio-sales-lead": "portfolio-sales-lead",
+    ondine: "ai-transformation-architect", "ai-transformation-architect": "ai-transformation-architect",
+    wren: "pricing-analyst", "pricing-analyst": "pricing-analyst",
+    cyan: "procurement-aggregator", "procurement-aggregator": "procurement-aggregator",
+    marigold: "org-design-operator", "org-design-operator": "org-design-operator",
+    indigo: "integration-pmo", "integration-pmo": "integration-pmo",
+    sage: "benchmarking-steward", "benchmarking-steward": "benchmarking-steward",
+    "board-pack-extractor": "board-pack-extractor",
+  };
+  function agentRoleSlug(text) {
+    if (!text) return null;
+    var key = slugify(text);
+    return AGENT_ROLE[key] || null;
+  }
+  function rawId(id) {
+    var i = id.indexOf(":");
+    return i === -1 ? id : id.slice(i + 1);
+  }
+  function routeForNode(node) {
+    var raw = rawId(node.id);
+    if (node.kind === "portco") {
+      return "/portcos/" + (UUID_RE.test(raw) ? raw : slugify(node.label));
+    }
+    if (node.kind === "agent") {
+      var role = agentRoleSlug(node.subtitle) || agentRoleSlug(node.label);
+      return role ? "/agents/" + role : null;
+    }
+    if (node.kind === "intervention") {
+      return UUID_RE.test(raw) ? "/interventions/" + raw : null;
+    }
+    return null; // bottleneck, playbook never routable
+  }
+
+  /* ---------- label helpers ---------- */
+  function relationLabel(label) {
+    if (!label) return "related";
+    return label.replace(/_/g, " ");
+  }
+  var IMPORTANT_REL = /owns|at|approved|in[_ -]?flight|risk|blocked|savings|uplift|uses|triggered/i;
+  var MONEY_REL = /saving|uplift|margin|pricing|cost|revenue|aggregation|value|ebitda/i;
+  var PROV_REL = /source|uses|trained|derived|cited|proven|playbook/i;
+  function formatNodeLabel(node, degree) {
+    var prefix = LABEL_PREFIX[node.kind] || "";
+    var base = prefix ? prefix + " " + node.label : node.label;
+    if (degree >= HUB_COLLAPSE_DEGREE) return base + "\n" + degree + " links";
+    return base;
+  }
+
+  /* ============================================================
+     SHELL STATE
+     ============================================================ */
+  function cloneFilters(f) {
+    return {
+      activeKinds: new Set(f.activeKinds),
+      activeLenses: new Set(f.activeLenses),
+      importanceCut: f.importanceCut,
+      showProvenance: f.showProvenance,
+      showMoneyImpact: f.showMoneyImpact,
+    };
+  }
+  var DEFAULT_FILTERS = {
+    activeKinds: new Set(ALL_KINDS),
+    activeLenses: new Set(),
+    importanceCut: 0,
+    showProvenance: true,
+    showMoneyImpact: true,
+  };
+  var graph = DEMO_GRAPH;
+  var fullDegreeMap = buildDegreeMap(graph);
+  var state = {
+    query: "",
+    filters: cloneFilters(DEFAULT_FILTERS),
+    selectedId: null,
+    hoveredId: null,
+    history: [],
+  };
+  state.selectedId = defaultFocusNode(graph, null);
+
+  /* ============================================================
+     CYTOSCAPE STYLES (knowledge-graph-canvas.tsx, quoted)
+     ============================================================ */
+  var CY_STYLES = [
+    {
+      selector: "node",
+      style: {
+        width: "mapData(val, 8, 18, 54, 92)",
+        height: "mapData(val, 8, 18, 42, 72)",
+        "background-color": "data(color)",
+        "border-width": 2,
+        "border-color": "rgba(255,255,255,0.52)",
+        "border-opacity": 0.52,
+        color: "#f8fafc",
+        content: "data(labelText)",
+        "font-family": "Inter, ui-sans-serif, system-ui",
+        "font-size": 9,
+        "font-weight": 700,
+        "line-height": 1.25,
+        "text-halign": "center",
+        "text-valign": "center",
+        "text-wrap": "wrap",
+        "text-max-width": 88,
+        "text-outline-width": 2,
+        "text-outline-color": "#020309",
+        "text-outline-opacity": 0.86,
+        "overlay-opacity": 0,
+        "transition-duration": 160,
+        "transition-property": "background-color, border-color, opacity, width, height",
+        "z-index": 4,
+        shape: "data(shape)",
+      },
+    },
+    {
+      selector: "node:selected, node.selected",
+      style: {
+        "border-width": 4,
+        "border-color": "#f4b942",
+        "border-opacity": 1,
+        "overlay-color": "#f4b942",
+        "overlay-opacity": 0.18,
+        "overlay-padding": 6,
+        "z-index": 30,
+      },
+    },
+    {
+      selector: "node.hovered",
+      style: {
+        "border-width": 4,
+        "border-color": "#5eead4",
+        "border-opacity": 0.95,
+        "z-index": 28,
+      },
+    },
+    {
+      selector: "node.dimmed",
+      style: { opacity: 0.26, "text-opacity": 0.36 },
+    },
+    {
+      selector: "node.hub",
+      style: { "border-style": "double", "text-max-width": 96 },
+    },
+    {
+      selector: "edge",
+      style: {
+        width: "mapData(weight, 1, 3, 1.2, 3.2)",
+        "line-color": "rgba(148, 163, 184, 0.42)",
+        "target-arrow-color": "rgba(148, 163, 184, 0.55)",
+        "target-arrow-shape": "triangle",
+        "curve-style": "bezier",
+        "control-point-step-size": 42,
+        opacity: 0.64,
+        label: "data(labelText)",
+        color: "#cbd5e1",
+        "font-size": 8,
+        "font-family": "Inter, ui-sans-serif, system-ui",
+        "text-background-color": "#050816",
+        "text-background-opacity": 0.84,
+        "text-background-padding": 3,
+        "text-border-color": "rgba(255,255,255,0.12)",
+        "text-border-width": 1,
+        "text-border-opacity": 0.55,
+        "text-rotation": "autorotate",
+        "z-index": 1,
+      },
+    },
+    {
+      selector: "edge.money",
+      style: {
+        "line-color": "rgba(244, 185, 66, 0.64)",
+        "target-arrow-color": "rgba(244, 185, 66, 0.76)",
+        color: "#f4b942",
+        opacity: 0.88,
+      },
+    },
+    {
+      selector: "edge.provenance",
+      style: {
+        "line-style": "dashed",
+        "line-color": "rgba(92, 217, 179, 0.52)",
+        "target-arrow-color": "rgba(92, 217, 179, 0.68)",
+        color: "#9ff4d6",
+      },
+    },
+    {
+      selector: "edge.dimmed",
+      style: { opacity: 0.08, "text-opacity": 0 },
+    },
+    {
+      selector: "edge.focused",
+      style: {
+        width: 3,
+        opacity: 0.94,
+        "line-color": "#5eead4",
+        "target-arrow-color": "#5eead4",
+        color: "#a5f3fc",
+        "z-index": 20,
+      },
+    },
+  ];
+
+  /* ============================================================
+     CANVAS
+     ============================================================ */
+  var cy = cytoscape({
+    container: document.getElementById("kgCanvas"),
+    elements: [],
+    style: CY_STYLES,
+    minZoom: 0.35,
+    maxZoom: 2.4,
+    wheelSensitivity: 0.18,
+    boxSelectionEnabled: false,
+    autoungrabify: false,
+  });
+
+  cy.on("tap", "node", function (e) { onSelect(e.target.id()); });
+  cy.on("mouseover", "node", function (e) { onHover(e.target.id()); });
+  cy.on("mouseout", "node", function () { onHover(null); });
+  cy.on("tap", function (e) { if (e.target === cy) onSelect(null); });
+
+  function buildElements(visible, filters) {
+    var degreeMap = buildDegreeMap(visible); // degree within the visible subgraph
+    var focusId = state.selectedId || state.hoveredId;
+
+    // focus neighborhood (within visible)
+    var focusNeighbors = {};
+    if (focusId) {
+      visible.links.forEach(function (l) {
+        var s = endpointId(l.source), t = endpointId(l.target);
+        if (s === focusId) focusNeighbors[t] = true;
+        if (t === focusId) focusNeighbors[s] = true;
+      });
+    }
+
+    var els = [];
+    visible.nodes.forEach(function (n) {
+      var deg = degreeMap[n.id] || 0;
+      var classes = [n.kind];
+      if (deg >= HUB_COLLAPSE_DEGREE) classes.push("hub");
+      if (n.id === state.selectedId) classes.push("selected");
+      if (n.id === state.hoveredId) classes.push("hovered");
+      if (focusId && n.id !== focusId && !focusNeighbors[n.id]) classes.push("dimmed");
+      els.push({
+        group: "nodes",
+        data: {
+          id: n.id,
+          kind: n.kind,
+          rank: KIND_RANK[n.kind],
+          color: n.accent || KIND_COLORS[n.kind],
+          shape: KIND_SHAPES[n.kind],
+          val: Math.max(8, n.val),
+          labelText: formatNodeLabel(n, deg),
+        },
+        classes: classes.join(" "),
+      });
+    });
+
+    visible.links.forEach(function (l, i) {
+      var s = endpointId(l.source), t = endpointId(l.target);
+      var rel = relationLabel(l.label);
+      var isMoney = MONEY_REL.test(l.label || "");
+      var isProv = PROV_REL.test(l.label || "");
+      var classes = [];
+      var touchesFocus = focusId && (s === focusId || t === focusId);
+
+      // edge dim/focus logic
+      var dimmed = false;
+      if (touchesFocus) {
+        classes.push("focused");
+      } else if (focusId) {
+        dimmed = true;
+      } else {
+        // no focus: pre-dim hub edges whose label is not an important relation
+        var degS = degreeMap[s] || 0, degT = degreeMap[t] || 0;
+        var isHubEdge = degS >= HUB_COLLAPSE_DEGREE || degT >= HUB_COLLAPSE_DEGREE;
+        if (isHubEdge && !IMPORTANT_REL.test(l.label || "")) dimmed = true;
+      }
+      if (dimmed) classes.push("dimmed");
+      if (isMoney) classes.push("money");
+      else if (isProv) classes.push("provenance");
+
+      // label text: blank when dimmed, or money/prov gated off
+      var labelText = rel;
+      if (dimmed) labelText = "";
+      else if (isMoney && !filters.showMoneyImpact) labelText = "";
+      else if (isProv && !filters.showProvenance) labelText = "";
+
+      els.push({
+        group: "edges",
+        data: {
+          id: "e" + i + "-" + s + "-" + t,
+          source: s,
+          target: t,
+          weight: l.weight || 1,
+          labelText: labelText,
+        },
+        classes: classes.join(" "),
+      });
+    });
+
+    return els;
+  }
+
+  function runLayout() {
+    // Re-measure the container first. If the layout runs while the flex container
+    // is still 0-size (true on the very first render before the page reflows),
+    // dagre collapses every node to the origin, so always resize before laying out.
+    cy.resize();
+    cy.layout({
+      name: "dagre",
+      rankDir: "LR",
+      nodeSep: 46,
+      edgeSep: 14,
+      rankSep: 116,
+      padding: 32,
+      animate: false,
+      fit: true,
+    }).run();
+    requestAnimationFrame(function () { cy.resize(); cy.fit(undefined, 40); });
+  }
+
+  // Keep node positions stable on re-render unless the visible node set changes.
+  var lastNodeKey = "";
+  function renderCanvas() {
+    var visible = filterGraph(graph, state.filters, state.query, state.selectedId);
+
+    var emptyEl = document.getElementById("kgCanvasEmpty");
+    if (visible.nodes.length === 0) {
+      emptyEl.classList.add("show");
+    } else {
+      emptyEl.classList.remove("show");
+    }
+
+    var els = buildElements(visible, state.filters);
+    var nodeKey = visible.nodes.map(function (n) { return n.id; }).sort().join("|");
+    var structureChanged = nodeKey !== lastNodeKey;
+
+    if (structureChanged) {
+      lastNodeKey = nodeKey;
+      cy.batch(function () {
+        cy.elements().remove();
+        cy.add(els);
+      });
+      if (visible.nodes.length > 0) runLayout();
+    } else {
+      // Same node/edge set (a selection, hover, or toggle): update classes and
+      // labels in place so node positions are preserved. Rebuilding here would
+      // drop every node back to the origin and converge the graph on every click.
+      cy.batch(function () {
+        els.forEach(function (el) {
+          if (el.group !== "nodes" && el.group !== "edges") return;
+          var ex = cy.getElementById(el.data.id);
+          if (ex && ex.length) {
+            ex.classes(el.classes || "");
+            if (el.data.labelText !== undefined) ex.data("labelText", el.data.labelText);
+          }
+        });
+      });
+    }
+    return visible;
+  }
+
+  /* ============================================================
+     RENDER: lanes, legend, summary chips, rail, search, inspector, trail
+     ============================================================ */
+  var elLaneBar = document.getElementById("kgLaneBar");
+  var elLegend = document.getElementById("kgLegend");
+  var elSummary = document.getElementById("kgSummary");
+  var elKindToggles = document.getElementById("kgKindToggles");
+  var elLenses = document.getElementById("kgLenses");
+  var elInspector = document.getElementById("kgInspector");
+  var elTrail = document.getElementById("kgTrail");
+  var elStageTitle = document.getElementById("kgStageTitle");
+
+  function renderLanes(visible) {
+    var visCount = countByKind(visible.nodes);
+    var totCount = countByKind(graph.nodes);
+    elLaneBar.innerHTML = NODE_KIND_ORDER.map(function (kind) {
+      return '<div class="kg-lane-label" style="--kind-color:' + KIND_COLORS[kind] + '">' +
+        LANE_LABELS[kind] +
+        "<small>" + (visCount[kind] || 0) + " / " + (totCount[kind] || 0) + "</small>" +
+        "</div>";
+    }).join("");
+  }
+
+  function renderLegend() {
+    elLegend.innerHTML = ALL_KINDS.map(function (kind) {
+      return '<span class="kg-legend-item"><span class="kg-legend-dot" style="--dot:' + KIND_COLORS[kind] + '"></span>' + KIND_LABELS[kind] + "</span>";
+    }).join("");
+  }
+
+  function renderSummary() {
+    var s = summarizeGraph(graph);
+    var live = graph.nodes.length > 0;
+    elSummary.innerHTML =
+      chip("coral", iconActivity(), s.attentionNodes, "Attention") +
+      chip("blue", iconSparkles(), s.activeInterventions, "Active work") +
+      chip("teal", iconDatabaseZap(), s.reusablePlaybooks, "Reusable") +
+      '<span class="kg-pill"><span class="kg-pill-dot"></span>' + (live ? "Live graph" : "Demo fallback") + "</span>";
+  }
+  function chip(tone, icon, val, label) {
+    return '<span class="kg-chip tone-' + tone + '">' + icon +
+      '<span class="kg-chip-text"><span class="kg-chip-val">' + val + '</span><br><span class="kg-chip-label">' + label + "</span></span></span>";
+  }
+  function iconActivity() { return '<svg class="kg-chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>'; }
+  function iconSparkles() { return '<svg class="kg-chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9Z"/></svg>'; }
+  function iconDatabaseZap() { return '<svg class="kg-chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 12 2.8"/><path d="M3 12a9 3 0 0 0 9 3"/><path d="m13 19 2-3h-4l2-3"/></svg>'; }
+
+  function renderRail(visible) {
+    var visCount = countByKind(visible.nodes);
+    var totCount = countByKind(graph.nodes);
+    // Kind toggles
+    elKindToggles.innerHTML = NODE_KIND_ORDER.map(function (kind) {
+      var active = state.filters.activeKinds.has(kind);
+      return '<button class="kg-kind-toggle' + (active ? " kg-kind-toggle-active" : "") + '" data-kind="' + kind + '" aria-pressed="' + active + '" style="--kind-color:' + KIND_COLORS[kind] + '">' +
+        kindIconSvg(kind, "kg-kind-icon") +
+        '<span class="kg-kind-body"><span class="kg-kind-name">' + KIND_LABELS[kind] + '</span><br><span class="kg-kind-count">' + (visCount[kind] || 0) + " visible / " + (totCount[kind] || 0) + " total</span></span>" +
+        '<span class="kg-kind-swatch"></span>' +
+        "</button>";
+    }).join("");
+    Array.prototype.forEach.call(elKindToggles.querySelectorAll(".kg-kind-toggle"), function (btn) {
+      btn.addEventListener("click", function () {
+        var kind = btn.getAttribute("data-kind");
+        if (state.filters.activeKinds.has(kind)) state.filters.activeKinds.delete(kind);
+        else state.filters.activeKinds.add(kind);
+        render();
+      });
+    });
+
+    // Lenses
+    elLenses.innerHTML = LENSES.map(function (lens) {
+      var active = state.filters.activeLenses.has(lens.id);
+      return '<button class="kg-lens' + (active ? " kg-lens-active" : "") + '" data-lens="' + lens.id + '" aria-pressed="' + active + '">' +
+        '<span class="kg-lens-name">' + lens.name + '</span><span class="kg-lens-desc">' + lens.desc + "</span></button>";
+    }).join("");
+    Array.prototype.forEach.call(elLenses.querySelectorAll(".kg-lens"), function (btn) {
+      btn.addEventListener("click", function () {
+        var lens = btn.getAttribute("data-lens");
+        if (state.filters.activeLenses.has(lens)) state.filters.activeLenses.delete(lens);
+        else state.filters.activeLenses.add(lens);
+        render();
+      });
+    });
+  }
+
+  function renderTrail() {
+    if (state.history.length === 0) {
+      elTrail.innerHTML = '<span class="kg-trail-label">Focus trail</span><span class="kg-trail-empty">No inspected nodes yet</span>';
       return;
     }
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      activeIdx = (activeIdx + 1) % matches.length;
-      render(input.value);
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      activeIdx = (activeIdx - 1 + matches.length) % matches.length;
-      render(input.value);
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      const idx = activeIdx >= 0 ? activeIdx : 0;
-      pick(matches[idx].id);
-    } else if (e.key === "Escape") {
-      close();
-      input.blur();
-    }
-  });
+    var byId = {};
+    graph.nodes.forEach(function (n) { byId[n.id] = n; });
+    var items = state.history.map(function (id) {
+      var n = byId[id];
+      if (!n) return "";
+      var active = id === state.selectedId;
+      return '<button class="kg-history-item' + (active ? " kg-history-item-active" : "") + '" data-id="' + id + '">' + escapeHtml(n.label) + "</button>";
+    }).join("");
+    elTrail.innerHTML = '<span class="kg-trail-label">Focus trail</span>' + items;
+    Array.prototype.forEach.call(elTrail.querySelectorAll(".kg-history-item"), function (btn) {
+      btn.addEventListener("click", function () { focusNode(btn.getAttribute("data-id")); });
+    });
+  }
 
+  /* ---------- Inspector (spatial-inspector.tsx) ---------- */
+  function renderInspector() {
+    var byId = {};
+    graph.nodes.forEach(function (n) { byId[n.id] = n; });
+    var node = state.selectedId ? byId[state.selectedId] : null;
+
+    if (!node) {
+      var s = summarizeGraph(graph);
+      elInspector.innerHTML =
+        '<div class="kg-insp-empty">' +
+          '<span class="kg-insp-emblem"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/><path d="m13 13 6 6"/></svg></span>' +
+          '<span class="kg-eyebrow">Today\'s operating picture</span>' +
+          "<h3>Select a PortCo, value leak, intervention, or AI colleague.</h3>" +
+          "<p>Pick a node on the map to inspect its real fields and grouped connections. The lenses on the left narrow the graph to a single operating question.</p>" +
+          '<div class="kg-insp-summary">' +
+            summaryRow("Attention nodes", s.attentionNodes) +
+            summaryRow("Active interventions", s.activeInterventions) +
+            summaryRow("Reusable playbooks", s.reusablePlaybooks) +
+            summaryRow("Awaiting owners", s.awaitingOwners) +
+          "</div>" +
+        "</div>";
+      return;
+    }
+
+    var route = routeForNode(node);
+    var conns = connectionsFor(node.id, graph);
+    var degree = fullDegreeMap[node.id] || 0;
+
+    var html = "";
+    html += '<div class="kg-insp-header" style="--kind-color:' + KIND_COLORS[node.kind] + '">';
+    html += '<span class="kg-insp-kind">' + kindIconSvg(node.kind, "kg-kind-icon") + KIND_LABELS[node.kind] + "</span>";
+    if (route) {
+      html += '<a class="kg-open-link" href="' + escapeHtml(route) + '" onclick="return false;">Open</a>';
+    }
+    html += "</div>";
+
+    html += '<h2 class="kg-insp-name">' + escapeHtml(node.label) + "</h2>";
+    if (node.subtitle) html += '<div class="kg-insp-subtitle">' + escapeHtml(node.subtitle) + "</div>";
+    if (node.body) html += '<p class="kg-insp-body">' + escapeHtml(node.body) + "</p>";
+
+    // Facts grid: Kind, Degree, Connections
+    html += '<div class="kg-facts">' +
+      fact("Kind", KIND_LABELS[node.kind]) +
+      fact("Degree", degree) +
+      fact("Connections", conns.length) +
+      "</div>";
+
+    // Relationships (up to 9)
+    html += '<div class="kg-insp-block">';
+    html += '<div class="kg-insp-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>Relationships</div>';
+    if (conns.length === 0) {
+      html += '<p class="kg-empty-line">No relationships are attached to this node yet. Run ingestion or compute a plan to create graph edges.</p>';
+    } else {
+      html += conns.slice(0, 9).map(function (c) {
+        var dir = c.direction === "out" ? "To" : "From";
+        var rel = relationLabel(c.label);
+        return '<button class="kg-conn" data-id="' + c.node.id + '" style="--kind-color:' + KIND_COLORS[c.node.kind] + '">' +
+          kindIconSvg(c.node.kind, "kg-conn-icon") +
+          '<span class="kg-conn-body"><span class="kg-conn-label">' + escapeHtml(c.node.label) + '</span><span class="kg-conn-rel">' + dir + " · " + escapeHtml(rel) + "</span></span></button>";
+      }).join("");
+    }
+    html += "</div>";
+
+    // Evidence labels (up to 6)
+    html += '<div class="kg-insp-block">';
+    html += '<div class="kg-insp-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>Evidence labels</div>';
+    if (conns.length === 0) {
+      html += '<div class="kg-tags"><span class="kg-tag kg-tag-muted">No evidence edge yet</span></div>';
+    } else {
+      html += '<div class="kg-tags">' + conns.slice(0, 6).map(function (c) {
+        var muted = !c.label;
+        return '<span class="kg-tag' + (muted ? " kg-tag-muted" : "") + '">' + escapeHtml(relationLabel(c.label)) + "</span>";
+      }).join("") + "</div>";
+    }
+    html += "</div>";
+
+    elInspector.innerHTML = html;
+
+    Array.prototype.forEach.call(elInspector.querySelectorAll(".kg-conn"), function (btn) {
+      btn.addEventListener("click", function () { focusNode(btn.getAttribute("data-id")); });
+    });
+  }
+  function summaryRow(k, v) { return '<div class="kg-insp-summary-row"><span class="k">' + k + '</span><span class="v">' + v + "</span></div>"; }
+  function fact(k, v) { return '<div class="kg-fact"><div class="kg-fact-k">' + k + '</div><div class="kg-fact-v">' + v + "</div></div>"; }
+
+  /* ---------- Search (graph-search.tsx) ---------- */
+  var elSearch = document.getElementById("kgSearch");
+  var elSearchInput = document.getElementById("kgSearchInput");
+  var elSearchResults = document.getElementById("kgSearchResults");
+  var elSearchClear = document.getElementById("kgSearchClear");
+
+  function renderSearchResults() {
+    var q = state.query.trim();
+    if (!q) {
+      elSearch.classList.remove("open", "has-query");
+      elSearchResults.innerHTML = "";
+      return;
+    }
+    elSearch.classList.add("open", "has-query");
+    var hits = searchGraph(graph, q, fullDegreeMap).slice(0, 7);
+    if (hits.length === 0) {
+      elSearchResults.innerHTML = '<div class="kg-search-empty">No matching node. Clear a filter or search for a PortCo, agent, intervention, or playbook.</div>';
+      return;
+    }
+    elSearchResults.innerHTML = hits.map(function (n) {
+      var meta = KIND_LABELS[n.kind] + (n.subtitle ? " · " + n.subtitle : "");
+      return '<button class="kg-search-hit" data-id="' + n.id + '" style="--kind-color:' + KIND_COLORS[n.kind] + '">' +
+        '<span style="color:' + KIND_COLORS[n.kind] + ';display:inline-flex">' + kindIconSvg(n.kind, "kg-hit-icon") + "</span>" +
+        '<span class="kg-hit-body"><span class="kg-hit-label">' + escapeHtml(n.label) + '</span><br><span class="kg-hit-meta">' + escapeHtml(meta.toUpperCase()) + "</span></span></button>";
+    }).join("");
+    Array.prototype.forEach.call(elSearchResults.querySelectorAll(".kg-search-hit"), function (btn) {
+      btn.addEventListener("click", function () { focusNode(btn.getAttribute("data-id")); });
+    });
+  }
+  elSearchInput.addEventListener("input", function () {
+    state.query = elSearchInput.value;
+    renderSearchResults();
+    render(); // query feeds filterGraph
+  });
+  elSearchClear.addEventListener("click", function () {
+    state.query = "";
+    elSearchInput.value = "";
+    renderSearchResults();
+    render();
+  });
   document.addEventListener("click", function (e) {
-    if (!e.target.closest(".kg-search")) close();
+    if (!elSearch.contains(e.target)) elSearch.classList.remove("open");
   });
-})();
 
-/* =============================================================
-   Scene polish after mount: fog at the bg color, strip the default
-   lights down to one faint ambient, start a slow auto-rotate that
-   pauses on user interaction and resumes when idle.
-   ============================================================= */
-let controls = null;
-let autoRotateResumeTimer = null;
-
-function pauseAutoRotate() {
-  if (controls) controls.autoRotate = false;
-  clearTimeout(autoRotateResumeTimer);
-}
-function resumeAutoRotateSoon() {
-  clearTimeout(autoRotateResumeTimer);
-  autoRotateResumeTimer = setTimeout(function () {
-    if (controls && !selectedId) controls.autoRotate = true;
-  }, 4000);
-}
-
-setTimeout(function () {
-  const scene = Graph.scene();
-  const camera = Graph.camera();
-  controls = Graph.controls();
-
-  // Depth fog: distant nodes dissolve into the void.
-  scene.fog = new THREE.FogExp2(0x0a0e1c, 0.00145);
-
-  // Strip library lights; the glow is all additive sprites. One faint ambient.
-  const toRemove = [];
-  scene.traverse(function (o) {
-    if (o.isLight) toRemove.push(o);
-  });
-  toRemove.forEach(function (l) { if (l.parent) l.parent.remove(l); });
-  scene.add(new THREE.AmbientLight(0x9aaccc, 0.16));
-
-  // Calm auto-rotate with smooth damping.
-  if (controls) {
-    controls.autoRotate = true;
-    controls.autoRotateSpeed = 0.55;   // slow, calm
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.12;
-    controls.update();
+  /* ============================================================
+     ACTIONS
+     ============================================================ */
+  function pushHistory(id) {
+    if (!id) return;
+    state.history = state.history.filter(function (h) { return h !== id; });
+    state.history.unshift(id);
+    state.history = state.history.slice(0, 5);
+  }
+  function onSelect(id) {
+    state.selectedId = id;
+    if (id) pushHistory(id);
+    render();
+  }
+  function onHover(id) {
+    state.hoveredId = id;
+    // hover only affects dimming; rebuild element classes without relayout
+    renderCanvas();
+  }
+  function focusNode(id) {
+    state.selectedId = id;
+    state.query = "";
+    elSearchInput.value = "";
+    elSearch.classList.remove("open", "has-query");
+    if (id) pushHistory(id);
+    render();
+  }
+  function reset() {
+    state.query = "";
+    elSearchInput.value = "";
+    state.hoveredId = null;
+    state.filters = cloneFilters(DEFAULT_FILTERS);
+    state.selectedId = defaultFocusNode(graph, null);
+    document.getElementById("kgImportance").value = "0";
+    document.getElementById("kgImportanceVal").textContent = "0";
+    document.getElementById("kgProvenance").setAttribute("aria-pressed", "true");
+    document.getElementById("kgMoney").setAttribute("aria-pressed", "true");
+    render();
   }
 
-  // Start the camera pulled back a little.
-  camera.position.z = 320;
-
-  // Pause auto-rotate the moment the user touches the scene; resume when idle.
-  const dom = Graph.renderer().domElement;
-  ["pointerdown", "wheel", "touchstart"].forEach(function (ev) {
-    dom.addEventListener(ev, function () { pauseAutoRotate(); }, { passive: true });
+  /* ---------- Rail control wiring (importance + overlays + reset) ---------- */
+  document.getElementById("kgImportance").addEventListener("input", function (e) {
+    state.filters.importanceCut = parseInt(e.target.value, 10) || 0;
+    document.getElementById("kgImportanceVal").textContent = state.filters.importanceCut;
+    render();
   });
-  ["pointerup", "touchend"].forEach(function (ev) {
-    dom.addEventListener(ev, function () { resumeAutoRotateSoon(); }, { passive: true });
+  document.getElementById("kgProvenance").addEventListener("click", function () {
+    state.filters.showProvenance = !state.filters.showProvenance;
+    this.setAttribute("aria-pressed", String(state.filters.showProvenance));
+    render();
   });
-  dom.addEventListener("mouseleave", function () { resumeAutoRotateSoon(); }, { passive: true });
-}, 300);
+  document.getElementById("kgMoney").addEventListener("click", function () {
+    state.filters.showMoneyImpact = !state.filters.showMoneyImpact;
+    this.setAttribute("aria-pressed", String(state.filters.showMoneyImpact));
+    render();
+  });
+  document.getElementById("kgReset").addEventListener("click", reset);
+  document.getElementById("kgEmptyReset").addEventListener("click", reset);
 
-/* =============================================================
-   Continuous render loop, separate from the simulation tick:
-   a gentle pulse on the focused / hovered node so the graph keeps
-   shimmering even when the layout has frozen.
-   ============================================================= */
-(function pulseLoop() {
-  function tick() {
-    if (!document.hidden) {
-      const t = performance.now() / 1000;
-      const pulse = 0.55 + Math.sin(t * Math.PI * 2 * 0.6) * 0.45; // 0.1 .. 1.0
+  document.getElementById("kgZoomIn").addEventListener("click", function () { cy.zoom(cy.zoom() * 1.2); });
+  document.getElementById("kgZoomOut").addEventListener("click", function () { cy.zoom(cy.zoom() / 1.2); });
+  document.getElementById("kgFit").addEventListener("click", function () { cy.fit(undefined, 40); });
 
-      const focusId = selectedId || hoverNodeId;
-      if (focusId) {
-        const n = Graph.graphData().nodes.find(function (x) { return x.id === focusId; });
-        const grp = n && n.__threeObj;
-        if (grp && grp.userData.core) {
-          const core = grp.userData.core;
-          const soma = core.userData.isSoma;
-          const opBoost = soma ? 0.2 : 0.12;
-          const scBoost = soma ? 0.18 : 0.12;
-          core.material.opacity = Math.min(1, core.userData.baseOpacity + opBoost * pulse);
-          const s = core.userData.baseScale * (1 + scBoost * pulse);
-          core.scale.set(s, s, 1);
-        }
-      }
+  /* ---------- utils ---------- */
+  function escapeHtml(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  /* ============================================================
+     MASTER RENDER
+     ============================================================ */
+  function render() {
+    var byId = {};
+    graph.nodes.forEach(function (n) { byId[n.id] = n; });
+    var node = state.selectedId ? byId[state.selectedId] : null;
+    elStageTitle.textContent = node ? node.label : "Operating picture";
+
+    var visible = renderCanvas();
+    renderLanes(visible);
+    renderRail(visible);
+    renderSummary();
+    renderInspector();
+    renderTrail();
+  }
+
+  /* ---------- Boot ---------- */
+  renderLegend();
+  if (state.selectedId) pushHistory(state.selectedId);
+  render();
+  // The first layout can run before the flex container has measured, which
+  // collapses every node to the origin. Once the container has real size, re-run
+  // the layout (not just fit) so the lanes spread. Retry a few frames for slow loads.
+  (function ensureInitialLayout(tries) {
+    var el = document.getElementById("kgCanvas");
+    var r = el ? el.getBoundingClientRect() : { width: 0, height: 0 };
+    if (r.width > 80 && r.height > 80 && cy.nodes().length > 0) {
+      runLayout();
+    } else if (tries < 90) {
+      requestAnimationFrame(function () { ensureInitialLayout(tries + 1); });
+    } else {
+      runLayout();
     }
-    requestAnimationFrame(tick);
-  }
-  requestAnimationFrame(tick);
+  })(0);
+  window.addEventListener("resize", function () { cy.resize(); });
 })();
-
-/* =============================================================
-   Resize handling and initial fit + loader hide.
-   ============================================================= */
-function sizeGraph() {
-  Graph.width(elGraph.clientWidth);
-  Graph.height(elGraph.clientHeight);
-}
-window.addEventListener("resize", function () {
-  clearTimeout(window.__kgResizeTimer);
-  window.__kgResizeTimer = setTimeout(sizeGraph, 160);
-});
-sizeGraph();
-
-// Fit once the engine has settled a bit, then hide the loader.
-Graph.onEngineStop(function () {
-  // onEngineStop fires when the layout cools. Fit only the first time.
-  if (!window.__kgFitted) {
-    window.__kgFitted = true;
-    Graph.zoomToFit(800, 60);
-  }
-});
-setTimeout(function () {
-  const loader = document.getElementById("kgLoading");
-  loader.classList.add("is-hidden");
-  setTimeout(function () { loader.style.display = "none"; }, 450);
-}, 1200);
-
-// Expose a debug handle (avoid window.cy-style id collisions).
-window.__kg = { Graph: Graph, select: onNodeClick, deselect: deselect, reset: resetView };
 </script>
-
 </body>
 </html>
