@@ -1003,7 +1003,13 @@ const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerH
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
-controls.enablePan = false;
+controls.enablePan = true;
+controls.screenSpacePanning = true;
+controls.panSpeed = 0.8;
+controls.zoomSpeed = 0.9;
+// Standard 3D-viewer mouse map: left drag orbits, right drag pans, middle drag and wheel dolly.
+controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
 controls.minDistance = 120;
 controls.maxDistance = 2200;
 controls.minPolarAngle = 0.25;
@@ -1293,6 +1299,7 @@ controls.addEventListener("end", () => {
 });
 let pointerDownAt = null;
 renderer.domElement.addEventListener("pointerdown", (e) => {
+  if (e.button !== 0) { pointerDownAt = null; return; } // only left arms click-to-select; right pans, middle dollies
   pointerDownAt = { x: e.clientX, y: e.clientY };
 });
 renderer.domElement.addEventListener("pointermove", onPointerMove);
@@ -1953,71 +1960,55 @@ function createStageZones() {
   // SelectiveBloom stays scoped to nodeMesh; stage slabs are direct-rendered, quiet category underlights.
   group.userData.dimTarget = 0;
   group.userData.showFloor = SHOW_FLOOR;
-  const slabGeometry = new THREE.PlaneGeometry(440, 345);
-  slabGeometry.rotateY(Math.PI / 2);
-  group.userData.slabMaterials = [];
+  // Stage zones are soft bounding-box outlines now (edges only, no filled interior), so
+  // clusters several layers deep stay visible without the translucent fills occluding them.
+  group.userData.slabMaterials = []; // kept empty; the filled slabs were removed by request
   group.userData.edgeMaterials = [];
   group.userData.accentMaterials = [];
-  const darkBase = new THREE.Color(0x171008);
+  const yLo = -160.5, yHi = 184.5, zLo = -230, zHi = 210;
 
   for (const stage of STAGE_DEFS) {
     const x = stage.x;
     const tint = zoneTint(stage.kind);
-    const slabMaterial = new THREE.MeshBasicMaterial({
-      color: tint.clone().lerp(darkBase, 0.55),
-      transparent: true,
-      opacity: 0.06,
-      side: THREE.DoubleSide,
-      depthTest: true,
-      depthWrite: false,
-      fog: false,
-      toneMapped: true,
-      blending: THREE.NormalBlending,
-    });
     const edgeMaterial = new THREE.LineBasicMaterial({
       color: tint,
       transparent: true,
-      opacity: 0.09,
+      opacity: 0.16,
       depthTest: true,
       depthWrite: false,
-      fog: false,
+      fog: true,
       toneMapped: true,
       blending: THREE.NormalBlending,
     });
     const accentMaterial = new THREE.LineBasicMaterial({
       color: 0xf4b942,
       transparent: true,
-      opacity: 0.28,
+      opacity: 0.22,
       depthTest: true,
       depthWrite: false,
-      fog: false,
+      fog: true,
       toneMapped: true,
       blending: THREE.NormalBlending,
     });
-    group.userData.slabMaterials.push(slabMaterial);
     group.userData.edgeMaterials.push(edgeMaterial);
     group.userData.accentMaterials.push(accentMaterial);
 
-    const slab = new THREE.Mesh(slabGeometry, slabMaterial);
-    slab.position.set(x, 12, -10);
-    slab.renderOrder = 0;
-    slab.userData.kind = stage.kind;
-    group.add(slab);
-
-    const edgeGeometry = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(x, -160.5, -230),
-      new THREE.Vector3(x, 184.5, -230),
-      new THREE.Vector3(x, -160.5, 210),
-      new THREE.Vector3(x, 184.5, 210),
+    // full rectangle frame in the y-z plane at this stage x (the bounding-box outline)
+    const frameGeometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(x, yLo, zLo), new THREE.Vector3(x, yHi, zLo),
+      new THREE.Vector3(x, yHi, zLo), new THREE.Vector3(x, yHi, zHi),
+      new THREE.Vector3(x, yHi, zHi), new THREE.Vector3(x, yLo, zHi),
+      new THREE.Vector3(x, yLo, zHi), new THREE.Vector3(x, yLo, zLo),
     ]);
-    const edge = new THREE.LineSegments(edgeGeometry, edgeMaterial);
-    edge.renderOrder = 0;
-    edge.userData.kind = stage.kind;
-    group.add(edge);
+    const frame = new THREE.LineSegments(frameGeometry, edgeMaterial);
+    frame.renderOrder = 0;
+    frame.userData.kind = stage.kind;
+    group.add(frame);
 
+    // amber top-accent line keeps the brand edge along the top of each frame
     const accentGeometry = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(x, 184.5, -230),
-      new THREE.Vector3(x, 184.5, 210),
+      new THREE.Vector3(x, yHi, zLo),
+      new THREE.Vector3(x, yHi, zHi),
     ]);
     const accent = new THREE.Line(accentGeometry, accentMaterial);
     accent.renderOrder = 1;
@@ -2091,11 +2082,10 @@ function updateStageZoneFade() {
   const fade = clamp((viewDistance - 300) / 600, 0, 1);
   const dim = stageZones.userData.dimTarget || 0;
   const base = {
-    slabMaterials: THREE.MathUtils.lerp(0.06, 0.034, dim),
-    edgeMaterials: THREE.MathUtils.lerp(0.09, 0.05, dim),
-    accentMaterials: THREE.MathUtils.lerp(0.28, 0.17, dim),
+    edgeMaterials: THREE.MathUtils.lerp(0.16, 0.09, dim),
+    accentMaterials: THREE.MathUtils.lerp(0.22, 0.14, dim),
   };
-  for (const key of ["slabMaterials", "edgeMaterials", "accentMaterials"]) {
+  for (const key of ["edgeMaterials", "accentMaterials"]) {
     for (const material of stageZones.userData[key]) {
       material.opacity = base[key] * fade;
     }
