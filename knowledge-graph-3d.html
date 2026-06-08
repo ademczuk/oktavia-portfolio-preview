@@ -869,6 +869,47 @@ function createInstancedNodes() {
     depthWrite: true,
     toneMapped: false,
   });
+  material.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        "#include <common>",
+        `#include <common>
+varying vec3 vKgWorldNormal;
+varying vec3 vKgWorldPosition;`,
+      )
+      .replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>
+vec4 kgWorldPosition = modelMatrix * vec4(transformed, 1.0);
+vec3 kgObjectNormal = normal;
+#ifdef USE_INSTANCING
+  kgWorldPosition = modelMatrix * instanceMatrix * vec4(transformed, 1.0);
+  kgObjectNormal = mat3(instanceMatrix) * normal;
+#endif
+vKgWorldPosition = kgWorldPosition.xyz;
+vKgWorldNormal = normalize(mat3(modelMatrix) * kgObjectNormal);`,
+      );
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        "#include <common>",
+        `#include <common>
+varying vec3 vKgWorldNormal;
+varying vec3 vKgWorldPosition;`,
+      )
+      .replace(
+        "#include <color_fragment>",
+        `#include <color_fragment>
+vec3 kgNormal = normalize(vKgWorldNormal);
+vec3 kgViewDir = normalize(cameraPosition - vKgWorldPosition);
+float kgFacing = clamp(dot(kgNormal, kgViewDir), 0.0, 1.0);
+float kgCore = pow(kgFacing, 7.0);
+float kgRim = pow(1.0 - kgFacing, 3.1);
+vec3 kgCoreTint = vec3(1.0, 0.97, 0.9) * max(max(diffuseColor.r, diffuseColor.g), diffuseColor.b);
+diffuseColor.rgb = mix(diffuseColor.rgb, kgCoreTint, kgCore * 0.24);
+diffuseColor.rgb *= 1.0 - kgRim * 0.14;`,
+      );
+  };
+  material.customProgramCacheKey = () => "kg-node-fresnel-v1";
 
   const mesh = new THREE.InstancedMesh(geometry, material, DEMO_GRAPH.nodes.length);
   mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
