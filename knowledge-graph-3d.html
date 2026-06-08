@@ -1533,11 +1533,20 @@ function createNodeGlowTexture() {
   ]);
 }
 
+// Shared zone tints, one per stage, luminance-clamped to match the clouds.
+function zoneTint(kind) {
+  const c = new THREE.Color(KIND_COLORS[kind]);
+  const hsl = { h: 0, s: 0, l: 0 };
+  c.getHSL(hsl);
+  c.setHSL(hsl.h, 0.55, 0.56);
+  return c;
+}
+
 function createAtmosphereSprite() {
   const material = new THREE.SpriteMaterial({
     map: createRadialTexture([
-      [0, "rgba(244, 185, 66, 0.11)"],
-      [0.45, "rgba(244, 185, 66, 0.045)"],
+      [0, "rgba(244, 185, 66, 0.05)"],
+      [0.45, "rgba(244, 185, 66, 0.02)"],
       [1, "rgba(244, 185, 66, 0)"],
     ], 512),
     blending: THREE.AdditiveBlending,
@@ -1560,27 +1569,32 @@ function createSegmentClouds() {
   group.name = "segmentClouds";
 
   const CLOUD_SPECS = [
-    { kind: "agent",        pos: [-332, -12, -161], scale: 400, lerp: 0.72 },
+    { kind: "agent",        pos: [-332, -12, -161], scale: 400, lerp: 0.00 },
     { kind: "portco",       pos: [-147,  23,  -22], scale: 560, lerp: 0.00 },
-    { kind: "bottleneck",   pos: [  41, -46,   61], scale: 320, lerp: 0.45 },
-    { kind: "intervention", pos: [ 205, -25,  -90], scale: 420, lerp: 0.78 },
-    { kind: "playbook",     pos: [ 366,   9,  102], scale: 520, lerp: 0.62 },
+    { kind: "bottleneck",   pos: [  41, -46,   61], scale: 320, lerp: 0.00 },
+    { kind: "intervention", pos: [ 205, -25,  -90], scale: 420, lerp: 0.00 },
+    { kind: "playbook",     pos: [ 366,   9,  102], scale: 520, lerp: 0.00 },
   ];
 
-  const HOVER_ALPHA = 0.055;
-  const REST_ALPHA = 0.012;
+  const HOVER_ALPHA = 0.16;
+  const REST_ALPHA = 0.06;
 
   for (const spec of CLOUD_SPECS) {
-    const tint = new THREE.Color(KIND_COLORS[spec.kind])
-      .lerp(new THREE.Color(0xf4b942), spec.lerp);
+    const tint = new THREE.Color(KIND_COLORS[spec.kind]);
+    const hsl = { h: 0, s: 0, l: 0 };
+    tint.getHSL(hsl);
+    tint.setHSL(hsl.h, 0.55, 0.56);
+    tint.lerp(new THREE.Color(0xf4b942), spec.lerp);
     const r = Math.round(tint.r * 255);
     const g = Math.round(tint.g * 255);
     const b = Math.round(tint.b * 255);
 
     const material = new THREE.SpriteMaterial({
       map: createRadialTexture([
-        [0,    `rgba(${r},${g},${b}, ${HOVER_ALPHA})`],
-        [0.42, `rgba(${r},${g},${b}, ${HOVER_ALPHA * 0.4})`],
+        [0,    `rgba(${r},${g},${b}, ${HOVER_ALPHA * 1.1})`],
+        [0.22, `rgba(${r},${g},${b}, ${HOVER_ALPHA * 0.7})`],
+        [0.50, `rgba(${r},${g},${b}, ${HOVER_ALPHA * 0.28})`],
+        [0.78, `rgba(${r},${g},${b}, ${HOVER_ALPHA * 0.08})`],
         [1,    `rgba(${r},${g},${b}, 0)`],
       ], 512),
       blending: THREE.AdditiveBlending,
@@ -1619,7 +1633,7 @@ function updateSegmentClouds(now) {
 
   const lerpSpeed = 1 - Math.exp(-delta * 12);
   const viewDistance = camera.position.distanceTo(graphCenter);
-  const detailFade = THREE.MathUtils.lerp(0.14, 1.0, clamp((viewDistance - 420) / 900, 0, 1));
+  const detailFade = THREE.MathUtils.lerp(0.55, 1.0, clamp((viewDistance - 420) / 900, 0, 1));
 
   for (const cloud of segmentClouds.children) {
     const target = ((cloud.userData.kind === focusedKind) ? cloud.userData.hoverOpacity : cloud.userData.restOpacity) * detailFade;
@@ -1932,49 +1946,58 @@ function createLaneGuides() {
 
 function createStageZones() {
   const group = new THREE.Group();
-  // SelectiveBloom stays scoped to nodeMesh; these divider midpoints come from the irregular fixture stations by design.
+  // SelectiveBloom stays scoped to nodeMesh; stage slabs are direct-rendered, quiet category underlights.
   group.userData.dimTarget = 0;
   group.userData.showFloor = SHOW_FLOOR;
   const slabGeometry = new THREE.PlaneGeometry(440, 345);
   slabGeometry.rotateY(Math.PI / 2);
-  const slabMaterial = new THREE.MeshBasicMaterial({
-    color: 0x171008,
-    transparent: true,
-    opacity: 0.08,
-    side: THREE.DoubleSide,
-    depthTest: true,
-    depthWrite: false,
-    fog: false,
-    toneMapped: true,
-    blending: THREE.NormalBlending,
-  });
-  const edgeMaterial = new THREE.LineBasicMaterial({
-    color: 0xf4b942,
-    transparent: true,
-    opacity: 0.09,
-    depthTest: true,
-    depthWrite: false,
-    fog: false,
-    toneMapped: true,
-    blending: THREE.NormalBlending,
-  });
-  const accentMaterial = new THREE.LineBasicMaterial({
-    color: 0xf4b942,
-    transparent: true,
-    opacity: 0.28,
-    depthTest: true,
-    depthWrite: false,
-    fog: false,
-    toneMapped: true,
-    blending: THREE.NormalBlending,
-  });
-  group.userData.slabMaterial = slabMaterial;
-  group.userData.edgeMaterial = edgeMaterial;
-  group.userData.accentMaterial = accentMaterial;
-  for (const x of STAGE_DIVIDER_X) {
+  group.userData.slabMaterials = [];
+  group.userData.edgeMaterials = [];
+  group.userData.accentMaterials = [];
+  const darkBase = new THREE.Color(0x171008);
+
+  for (const stage of STAGE_DEFS) {
+    const x = stage.x;
+    const tint = zoneTint(stage.kind);
+    const slabMaterial = new THREE.MeshBasicMaterial({
+      color: tint.clone().lerp(darkBase, 0.55),
+      transparent: true,
+      opacity: 0.06,
+      side: THREE.DoubleSide,
+      depthTest: true,
+      depthWrite: false,
+      fog: false,
+      toneMapped: true,
+      blending: THREE.NormalBlending,
+    });
+    const edgeMaterial = new THREE.LineBasicMaterial({
+      color: tint,
+      transparent: true,
+      opacity: 0.09,
+      depthTest: true,
+      depthWrite: false,
+      fog: false,
+      toneMapped: true,
+      blending: THREE.NormalBlending,
+    });
+    const accentMaterial = new THREE.LineBasicMaterial({
+      color: 0xf4b942,
+      transparent: true,
+      opacity: 0.28,
+      depthTest: true,
+      depthWrite: false,
+      fog: false,
+      toneMapped: true,
+      blending: THREE.NormalBlending,
+    });
+    group.userData.slabMaterials.push(slabMaterial);
+    group.userData.edgeMaterials.push(edgeMaterial);
+    group.userData.accentMaterials.push(accentMaterial);
+
     const slab = new THREE.Mesh(slabGeometry, slabMaterial);
     slab.position.set(x, 12, -10);
     slab.renderOrder = 0;
+    slab.userData.kind = stage.kind;
     group.add(slab);
 
     const edgeGeometry = new THREE.BufferGeometry().setFromPoints([
@@ -1985,6 +2008,7 @@ function createStageZones() {
     ]);
     const edge = new THREE.LineSegments(edgeGeometry, edgeMaterial);
     edge.renderOrder = 0;
+    edge.userData.kind = stage.kind;
     group.add(edge);
 
     const accentGeometry = new THREE.BufferGeometry().setFromPoints([
@@ -1993,6 +2017,7 @@ function createStageZones() {
     ]);
     const accent = new THREE.Line(accentGeometry, accentMaterial);
     accent.renderOrder = 1;
+    accent.userData.kind = stage.kind;
     group.add(accent);
   }
   return group;
@@ -2005,7 +2030,8 @@ function createStageLabels() {
       x: stage.x,
       y: 188,
       z: -10,
-      color: 0xf4b942,
+      color: zoneTint(stage.kind),
+      opacity: 0.9,
       fontSize: 7,
       font: STAGE_EYEBROW_FONT,
       letterSpacing: 0.18,
@@ -2023,7 +2049,7 @@ function createStageLabels() {
   return group;
 }
 
-function createStageText(text, { x, y, z, color, fontSize, font, letterSpacing }) {
+function createStageText(text, { x, y, z, color, opacity = 1, fontSize, font, letterSpacing }) {
   const label = new Text();
   label.text = text;
   label.font = font;
@@ -2039,6 +2065,8 @@ function createStageText(text, { x, y, z, color, fontSize, font, letterSpacing }
   label.material.depthTest = true;
   label.material.depthWrite = false;
   label.material.toneMapped = true;
+  label.material.transparent = opacity < 1;
+  label.material.opacity = opacity;
   label.position.set(x, y, z);
   label.visible = true;
   label.sync();
@@ -2047,9 +2075,15 @@ function createStageText(text, { x, y, z, color, fontSize, font, letterSpacing }
 
 function updateStageZoneDimming(dimmed) {
   stageZones.userData.dimTarget = dimmed ? 1 : 0;
-  stageZones.userData.slabMaterial.opacity = THREE.MathUtils.lerp(0.08, 0.045, stageZones.userData.dimTarget);
-  stageZones.userData.edgeMaterial.opacity = THREE.MathUtils.lerp(0.09, 0.05, stageZones.userData.dimTarget);
-  stageZones.userData.accentMaterial.opacity = THREE.MathUtils.lerp(0.28, 0.17, stageZones.userData.dimTarget);
+  for (const material of stageZones.userData.slabMaterials) {
+    material.opacity = THREE.MathUtils.lerp(0.06, 0.034, stageZones.userData.dimTarget);
+  }
+  for (const material of stageZones.userData.edgeMaterials) {
+    material.opacity = THREE.MathUtils.lerp(0.09, 0.05, stageZones.userData.dimTarget);
+  }
+  for (const material of stageZones.userData.accentMaterials) {
+    material.opacity = THREE.MathUtils.lerp(0.28, 0.17, stageZones.userData.dimTarget);
+  }
 }
 
 function renderChrome() {
