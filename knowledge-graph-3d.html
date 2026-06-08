@@ -445,6 +445,10 @@
     color: var(--color-foreground);
   }
 
+  .kg-icon-button.kg-owner-hidden {
+    display: none;
+  }
+
   .kg-icon-button svg {
     width: 15px;
     height: 15px;
@@ -477,7 +481,7 @@
     right: 18px;
     bottom: 18px;
     z-index: 40;
-    width: 360px;
+    width: 320px;
     max-width: calc(100vw - 36px);
     overflow-y: auto;
     padding: 18px;
@@ -575,10 +579,229 @@
     background: rgb(94 234 212 / 0.08);
   }
 
+  .kg-rail {
+    margin-top: 10px;
+    max-height: calc(100vh - 260px);
+    overflow-y: auto;
+    padding: 14px;
+    border-radius: 14px;
+  }
+  .kg-rail-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .kg-rail-head h3 {
+    font-family: var(--font-display); font-size: 17px;
+    color: var(--color-foreground); font-weight: 400;
+  }
+  .kg-reset {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid rgb(255 255 255 / 0.1); border-radius: 8px;
+    background: rgb(255 255 255 / 0.045);
+    color: var(--color-muted-foreground);
+    font-family: var(--font-mono); font-size: 9px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 5px 9px; cursor: pointer;
+    transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+  }
+  .kg-reset:hover {
+    border-color: rgb(94 234 212 / 0.42);
+    background: rgb(94 234 212 / 0.1);
+    color: var(--color-foreground);
+  }
+  .kg-section { margin-bottom: 18px; }
+  .kg-section-title {
+    font-family: var(--font-mono); font-size: 9px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--color-muted-foreground);
+    margin-bottom: 9px;
+  }
+  .kg-disclosure {
+    margin-bottom: 14px;
+  }
+  .kg-disclosure > summary {
+    display: flex; align-items: center; justify-content: space-between;
+    list-style: none; cursor: pointer; user-select: none;
+  }
+  .kg-disclosure > summary::-webkit-details-marker {
+    display: none;
+  }
+  .kg-disclosure > summary::after {
+    content: "+";
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--kg-amber);
+  }
+  .kg-disclosure[open] > summary::after {
+    content: "-";
+  }
+  .kg-disclosure-body {
+    margin-top: 10px;
+  }
+  .kg-advanced-block {
+    margin-bottom: 14px;
+  }
+  .kg-advanced-block:last-child {
+    margin-bottom: 0;
+  }
+  .kg-kind-toggle {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; text-align: left;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    border-radius: 11px;
+    background: rgb(255 255 255 / 0.03);
+    color: var(--color-foreground);
+    padding: 9px 11px; margin-bottom: 7px; cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease, opacity 160ms ease;
+  }
+  .kg-kind-toggle .kg-kind-body { flex: 1; min-width: 0; }
+  .kg-kind-toggle .kg-kind-name { font-size: 13px; font-weight: 600; }
+  .kg-kind-toggle .kg-kind-count {
+    font-family: var(--font-mono); font-size: 9px;
+    color: var(--color-muted-foreground);
+  }
+  .kg-kind-toggle .kg-kind-swatch {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--kind-color); flex: none;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--kind-color) 60%, transparent);
+  }
+  .kg-kind-toggle[aria-pressed="false"] { opacity: 0.42; }
+  .kg-kind-toggle.kg-kind-toggle-active {
+    border-color: color-mix(in srgb, var(--kind-color) 48%, transparent);
+    background: color-mix(in srgb, var(--kind-color) 12%, rgb(255 255 255 / 0.03));
+  }
+  .kg-lenses-compact {
+    display: flex; flex-wrap: wrap; gap: 7px;
+  }
+  .kg-lens {
+    display: inline-flex; align-items: center; gap: 6px; text-align: left;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.03);
+    color: var(--color-foreground);
+    padding: 7px 10px; cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease;
+  }
+  .kg-lens .kg-lens-name { font-size: 12px; font-weight: 600; }
+  .kg-lens.kg-lens-active {
+    border-color: rgb(244 185 66 / 0.5);
+    background: rgb(244 185 66 / 0.1);
+  }
+  .kg-slider-row { padding: 4px 2px 2px; }
+  .kg-slider-label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 11px; color: var(--color-muted-foreground); margin-bottom: 7px;
+  }
+  .kg-slider-label b { color: var(--color-foreground); font-family: var(--font-mono); font-size: 12px; }
+  .kg-slider {
+    width: 100%; appearance: none; height: 4px; border-radius: 999px;
+    background: rgb(255 255 255 / 0.12); outline: none; cursor: pointer;
+  }
+  .kg-slider::-webkit-slider-thumb {
+    appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--kg-amber); border: 2px solid #050810; cursor: pointer;
+    box-shadow: 0 0 10px rgb(244 185 66 / 0.6);
+  }
+  .kg-slider::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--kg-amber); border: 2px solid #050810; cursor: pointer;
+  }
+  .kg-overlay-toggle {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    width: 100%; text-align: left;
+    border: 1px solid rgb(255 255 255 / 0.08);
+    border-radius: 11px;
+    background: rgb(255 255 255 / 0.03);
+    color: var(--color-foreground);
+    padding: 9px 11px; margin-bottom: 7px; cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease;
+  }
+  .kg-overlay-toggle .kg-overlay-name { font-size: 12px; font-weight: 600; }
+  .kg-overlay-switch {
+    width: 34px; height: 18px; flex: none; border-radius: 999px;
+    background: rgb(255 255 255 / 0.14); position: relative;
+    transition: background 160ms ease;
+  }
+  .kg-overlay-switch::after {
+    content: ""; position: absolute; top: 2px; left: 2px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #cfd4dc; transition: transform 160ms ease, background 160ms ease;
+  }
+  .kg-overlay-toggle[aria-pressed="true"] .kg-overlay-switch { background: rgb(94 234 212 / 0.55); }
+  .kg-overlay-toggle[aria-pressed="true"] .kg-overlay-switch::after { transform: translateX(16px); background: #050810; }
+  .kg-insp-idle { padding: 4px 2px; }
+  .kg-insp-idle-title {
+    font-family: var(--font-display); font-size: 22px; color: var(--color-foreground);
+    margin-bottom: 7px; line-height: 1.15;
+  }
+  .kg-insp-idle-prompt {
+    margin: 0 0 14px;
+    color: var(--color-muted-foreground);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .kg-insp-idle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+    padding: 10px 11px; margin-bottom: 7px;
+    border: 1px solid rgb(255 255 255 / 0.08); border-radius: 11px;
+    background: rgb(255 255 255 / 0.03); cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease;
+  }
+  .kg-insp-idle-row:hover {
+    border-color: rgb(94 234 212 / 0.4);
+    background: rgb(94 234 212 / 0.08);
+  }
+  .kg-insp-idle-row-active {
+    border-color: rgb(244 185 66 / 0.48);
+    background: rgb(244 185 66 / 0.1);
+  }
+  .kg-insp-idle-copy {
+    min-width: 0;
+  }
+  .kg-insp-idle-val {
+    font-family: var(--font-mono); font-size: 16px; color: var(--kg-amber); font-weight: 700;
+  }
+  .kg-insp-idle-label {
+    display: block; font-size: 12px; color: var(--color-foreground); font-weight: 600;
+  }
+  .kg-insp-idle-desc {
+    display: block; margin-top: 2px;
+    color: var(--color-muted-foreground);
+    font-size: 10.5px; line-height: 1.35;
+  }
+  .kg-insp-idle-action {
+    display: inline-flex; align-items: center; gap: 9px; flex: none;
+  }
+  .kg-insp-idle-chev {
+    width: 18px; height: 18px; border-radius: 999px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid rgb(255 255 255 / 0.1);
+    color: var(--color-muted-foreground);
+    font-family: var(--font-mono); font-size: 11px;
+    transition: border-color 160ms ease, color 160ms ease, transform 160ms ease;
+  }
+  .kg-insp-idle-row:hover .kg-insp-idle-chev {
+    border-color: rgb(94 234 212 / 0.45);
+    color: var(--color-foreground);
+    transform: translateX(2px);
+  }
+  .kg-empty-scope {
+    display: none; align-items: center; justify-content: center; gap: 10px;
+    position: fixed; inset: 0; z-index: 50; background: #02050d;
+    color: var(--color-muted-foreground); font-size: 14px;
+  }
+  .kg-empty-scope.open { display: flex; }
+  .kg-empty-scope button {
+    border: 1px solid rgb(255 255 255 / 0.12); border-radius: 8px;
+    background: rgb(255 255 255 / 0.05); color: var(--color-foreground);
+    padding: 6px 12px; cursor: pointer;
+  }
+
   @media (max-width: 720px) {
     .kg-corner-tr .kg-counts,
     .kg-corner-bl .kg-legend,
-    .kg-stage-readout {
+    .kg-stage-readout,
+    .kg-rail {
       display: none;
     }
   }
@@ -607,6 +830,47 @@
     <button id="kgSearchClear" class="kg-search-clear" aria-label="Clear search">x</button>
     <div id="kgSearchResults" class="kg-search-results kg-glass" role="listbox"></div>
   </div>
+
+  <aside class="kg-rail kg-glass" id="kgRail">
+    <div class="kg-rail-head">
+      <h3>Start here</h3>
+      <button id="kgRailReset" class="kg-reset">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+        Clear filters
+      </button>
+    </div>
+    <div class="kg-section">
+      <div class="kg-section-title">Entity types</div>
+      <div id="kgKindToggles"></div>
+    </div>
+    <details class="kg-section kg-disclosure">
+      <summary class="kg-section-title">Lens filters</summary>
+      <div id="kgLenses" class="kg-lenses-compact kg-disclosure-body"></div>
+    </details>
+    <details class="kg-section kg-disclosure">
+      <summary class="kg-section-title">Advanced</summary>
+      <div class="kg-disclosure-body">
+        <div class="kg-advanced-block">
+          <div class="kg-section-title">Declutter</div>
+          <div class="kg-slider-row">
+            <div class="kg-slider-label"><span>Minimum importance</span><b id="kgImportanceVal">0</b></div>
+            <input id="kgImportance" class="kg-slider" type="range" min="0" max="16" step="1" value="0" />
+          </div>
+        </div>
+        <div class="kg-advanced-block">
+          <div class="kg-section-title">Evidence overlays</div>
+          <button id="kgProvenance" class="kg-overlay-toggle" aria-pressed="true">
+            <span class="kg-overlay-name">Show where this came from</span>
+            <span class="kg-overlay-switch" aria-hidden="true"></span>
+          </button>
+          <button id="kgMoney" class="kg-overlay-toggle" aria-pressed="true">
+            <span class="kg-overlay-name">Show money impact</span>
+            <span class="kg-overlay-switch" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
+    </details>
+  </aside>
 </div>
 
 <div class="kg-corner-tr">
@@ -615,16 +879,12 @@
 </div>
 
 <div class="kg-corner-bl">
-  <div class="kg-legend kg-glass">
-    <div class="kg-legend-title">Entity types</div>
-    <div class="kg-legend-items" id="kgLegend"></div>
-  </div>
   <div class="kg-controls">
     <button class="kg-icon-button" id="kgReset" title="Reset view">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
       Reset view
     </button>
-    <button class="kg-icon-button" id="kgHalcyon" title="Gate camera: Halcyon close-up">
+    <button class="kg-icon-button kg-owner-hidden" id="kgHalcyon" title="Gate camera: Halcyon close-up">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>
       Halcyon gate
     </button>
@@ -640,6 +900,7 @@
   Click any node to dim context, open the inspector, and stream amber flow particles along the directed value-chain path only.
 </div>
 
+<div class="kg-empty-scope" id="kgEmptyScope"><span>No nodes match the current filters.</span><button id="kgEmptyReset">Clear filters</button></div>
 <aside class="kg-inspector kg-glass" id="kgInspector"></aside>
 
 <script type="module">
@@ -662,6 +923,7 @@ import { DEMO_GRAPH, KIND_COLORS, KIND_LABELS, NODE_KIND_ORDER } from "./kg3d-fi
 
 const container = document.getElementById("kg3d");
 const boot = document.getElementById("kgBoot");
+const railEl = document.getElementById("kgRail");
 const countsEl = document.getElementById("kgCounts");
 const legendEl = document.getElementById("kgLegend");
 const rotateLabel = document.getElementById("kgRotateLabel");
@@ -680,6 +942,17 @@ const adjacency = buildAdjacency();
 const incident = buildIncident();
 const nodeRender = new Map();
 const hiddenKinds = new Set();
+const SHOW_FLOOR = false;
+const STAGE_DEFS = [
+  { kind: "agent", label: "AI colleagues", x: -340 },
+  { kind: "portco", label: "PortCos", x: -150 },
+  { kind: "bottleneck", label: "Value leaks", x: 40 },
+  { kind: "intervention", label: "Interventions", x: 210 },
+  { kind: "playbook", label: "Reusable playbooks", x: 380 },
+];
+const STAGE_DIVIDER_X = [-245, -55, 125, 295];
+const STAGE_EYEBROW_FONT = "https://fonts.gstatic.com/s/ibmplexmono/v20/-F6qfjptAgt5VM-kVkqdyU8n3twJ8lc.ttf";
+const STAGE_NAME_FONT = "https://fonts.gstatic.com/s/instrumentserif/v5/jizBRFtNs2ka5fXjeivQ4LroWlx-2zI.ttf";
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 const tempObject = new THREE.Object3D();
@@ -690,6 +963,26 @@ let currentPathLinks = [];
 let searchIndex = -1;
 let searchList = [];
 const graphCenter = computeCenter(DEMO_GRAPH.nodes);
+const LENS_SHIFT_RAIL_RATIO = 0.091;
+const LENS_SHIFT_MAX_PX = 32;
+let lensShiftPx = 0;
+
+const ALL_KINDS = NODE_KIND_ORDER.slice();
+const filters = {
+  activeKinds: new Set(ALL_KINDS),
+  activeLenses: new Set(),
+  importanceCut: 0,
+  showProvenance: true,
+  showMoneyImpact: true,
+};
+let scopeSet = null;
+
+function syncHiddenKinds() {
+  hiddenKinds.clear();
+  for (const kind of ALL_KINDS) {
+    if (!filters.activeKinds.has(kind)) hiddenKinds.add(kind);
+  }
+}
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
   alpha: false,
@@ -701,13 +994,12 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.95;
+renderer.toneMapping = THREE.NoToneMapping;
 container.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x02050d);
-scene.fog = new THREE.FogExp2(0x02050d, 0.0011);
+scene.fog = new THREE.FogExp2(0x02050d, 0.00075);
 
 const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 1800);
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -715,12 +1007,13 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.enablePan = false;
 controls.minDistance = 120;
-controls.maxDistance = 980;
+controls.maxDistance = 2200;
 controls.minPolarAngle = 0.25;
 controls.maxPolarAngle = Math.PI * 0.62;
 controls.target.set(graphCenter.x, graphCenter.y, graphCenter.z);
 controls.autoRotate = false;
 controls.autoRotateSpeed = 1.35; // about 45s per revolution at 60fps, applied inside the damped update for a smooth spin
+applyLensShift();
 
 scene.add(new THREE.AmbientLight(0x8aa0c0, 0.18));
 const key = new THREE.DirectionalLight(0xfff1c8, 1.2);
@@ -735,7 +1028,11 @@ const edgeLines = createEdges();
 const labelGroup = createLabels();
 const flowParticles = createFlowParticles();
 const selectionRing = createSelectionRing();
+const stageZones = createStageZones();
+const stageLabels = createStageLabels();
 scene.add(createLaneGuides());
+scene.add(stageZones);
+scene.add(stageLabels);
 scene.add(edgeLines);
 scene.add(nodeMesh);
 scene.add(labelGroup);
@@ -746,9 +1043,9 @@ const composer = new EffectComposer(renderer, { frameBufferType: THREE.HalfFloat
 composer.addPass(new RenderPass(scene, camera));
 const bloom = new SelectiveBloomEffect(scene, camera, {
   mipmapBlur: true,
-  luminanceThreshold: 0.1,
+  luminanceThreshold: 0.18,
   luminanceSmoothing: 0.05,
-  intensity: 0.3,
+  intensity: 0.22,
   radius: 0.75,
   kernelSize: KernelSize.MEDIUM,
 });
@@ -773,9 +1070,210 @@ let pausedUntil = 0;
 let frameCount = 0;
 let lastFrameTime = performance.now();
 
+/* ---------- ported 2D helpers ---------- */
+const LENSES = [
+  { id: "at_risk", name: "At-risk PortCos", desc: "Problems, blocked work, and degraded signals." },
+  { id: "open_leaks", name: "Open value leaks", desc: "Bottlenecks and active interventions." },
+  { id: "approved", name: "Approved work", desc: "Plans ready or already in flight." },
+  { id: "reuse", name: "Cross-portfolio reuse", desc: "Playbooks and comparable wins." },
+  { id: "awaiting", name: "Awaiting owner", desc: "Work waiting on a human or PortCo response." },
+];
+const MONEY_REL = /saving|uplift|margin|pricing|cost|revenue|aggregation|value|ebitda/i;
+const PROV_REL = /source|uses|trained|derived|cited|proven|playbook/i;
+
+function nodeText(node) {
+  return [node.label, node.subtitle || "", node.body || "", node.kind, node.id].join(" ").toLowerCase();
+}
+function incidentLabels(node, links) {
+  const out = [];
+  for (const link of links) {
+    const s = typeof link.source === "string" ? link.source : link.source.id;
+    const t = typeof link.target === "string" ? link.target : link.target.id;
+    if (s === node.id || t === node.id) out.push((link.label || "").toLowerCase());
+  }
+  return out.join(" ");
+}
+function nodeMatchesLens(node, lens, links) {
+  const text = nodeText(node);
+  const rel = incidentLabels(node, links);
+  const hay = text + " " + rel;
+  switch (lens) {
+    case "at_risk":
+      return node.kind === "bottleneck" || /risk|drift|blocked|degradation|high|leak|margin|churn/i.test(hay);
+    case "open_leaks":
+      return node.kind === "bottleneck" || (node.kind === "intervention" && /proposed|approved|in[_ -]?flight|awaiting/i.test(hay));
+    case "approved":
+      return node.kind === "intervention" && /approved|in[_ -]?flight/i.test(hay);
+    case "reuse":
+      return node.kind === "playbook" || /portfolio|reuse|proven|match|aggregation|cross/i.test(hay);
+    case "awaiting":
+      return /awaiting|owner|approval|human|response|gate|waiting/i.test(hay);
+    default:
+      return false;
+  }
+}
+function countByKind(nodes) {
+  const c = { agent: 0, portco: 0, playbook: 0, intervention: 0, bottleneck: 0 };
+  for (const n of nodes) c[n.kind] = (c[n.kind] || 0) + 1;
+  return c;
+}
+function summarizeGraph(data) {
+  let attention = 0, active = 0, reusable = 0, awaiting = 0;
+  for (const n of data.nodes) {
+    if (nodeMatchesLens(n, "at_risk", data.links)) attention += 1;
+    if (n.kind === "intervention" && /approved|in[_ -]?flight|proposed/i.test(nodeText(n))) active += 1;
+    if (n.kind === "playbook" || nodeMatchesLens(n, "reuse", data.links)) reusable += 1;
+    if (nodeMatchesLens(n, "awaiting", data.links)) awaiting += 1;
+  }
+  return { attentionNodes: attention, activeInterventions: active, reusablePlaybooks: reusable, awaitingOwners: awaiting };
+}
+
+/* ---------- scope / filter funnel ---------- */
+function computeScope() {
+  const hasLens = filters.activeLenses.size > 0;
+  if (!hasLens && filters.importanceCut === 0) return null;
+
+  const byId = new Map(DEMO_GRAPH.nodes.map((n) => [n.id, n]));
+  const kindOk = (n) => filters.activeKinds.has(n.kind) && (n.val || 0) >= filters.importanceCut;
+
+  const included = new Set();
+  for (const n of DEMO_GRAPH.nodes) {
+    if (kindOk(n)) included.add(n.id);
+  }
+
+  if (hasLens) {
+    const seed = new Set();
+    for (const n of DEMO_GRAPH.nodes) {
+      let match = false;
+      for (const lens of filters.activeLenses) {
+        if (nodeMatchesLens(n, lens, DEMO_GRAPH.links)) { match = true; break; }
+      }
+      if (match) seed.add(n.id);
+    }
+    // restrict to seed, still gated by kind+importance
+    for (const id of included) {
+      if (!seed.has(id)) included.delete(id);
+    }
+    // one-hop expansion
+    for (const link of DEMO_GRAPH.links) {
+      const s = typeof link.source === "string" ? link.source : link.source.id;
+      const t = typeof link.target === "string" ? link.target : link.target.id;
+      const src = byId.get(s), tgt = byId.get(t);
+      if (included.has(s) && src && kindOk(tgt)) included.add(t);
+      if (included.has(t) && tgt && kindOk(src)) included.add(s);
+    }
+  }
+
+  // force-include selected + neighbors
+  if (selectedId && byId.has(selectedId)) {
+    included.add(selectedId);
+    for (const link of DEMO_GRAPH.links) {
+      const s = typeof link.source === "string" ? link.source : link.source.id;
+      const t = typeof link.target === "string" ? link.target : link.target.id;
+      if (s === selectedId && byId.has(t)) included.add(t);
+      if (t === selectedId && byId.has(s)) included.add(s);
+    }
+  }
+
+  return included;
+}
+
+function applyFilters() {
+  syncHiddenKinds();
+  scopeSet = computeScope();
+  renderRail();
+  renderInspectorIdle();
+  applyVisualState();
+  const emptyScope = scopeSet && scopeSet.size === 0;
+  document.getElementById("kgEmptyScope").classList.toggle("open", emptyScope);
+}
+
+/* ---------- rail renderer ---------- */
+function renderRail() {
+  const totalByKind = countByKind(DEMO_GRAPH.nodes);
+  const visibleByKind = countByKind(DEMO_GRAPH.nodes.filter((n) => {
+    if (!filters.activeKinds.has(n.kind)) return false;
+    if (scopeSet && !scopeSet.has(n.id)) return false;
+    return true;
+  }));
+
+  const kindToggles = document.getElementById("kgKindToggles");
+  kindToggles.innerHTML = NODE_KIND_ORDER.map((kind) => {
+    const active = filters.activeKinds.has(kind);
+    return `<button type="button" class="kg-kind-toggle ${active ? "kg-kind-toggle-active" : ""}" data-kind="${kind}" aria-pressed="${active}" style="--kind-color:${KIND_COLORS[kind]}">` +
+      `<span class="kg-kind-swatch"></span>` +
+      `<span class="kg-kind-body"><span class="kg-kind-name">${KIND_LABELS[kind]}</span>` +
+      `<span class="kg-kind-count">${visibleByKind[kind] || 0} / ${totalByKind[kind] || 0}</span></span></button>`;
+  }).join("");
+  kindToggles.querySelectorAll(".kg-kind-toggle").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const kind = btn.getAttribute("data-kind");
+      if (filters.activeKinds.has(kind)) filters.activeKinds.delete(kind);
+      else filters.activeKinds.add(kind);
+      applyFilters();
+    });
+  });
+
+  const lensesEl = document.getElementById("kgLenses");
+  lensesEl.innerHTML = LENSES.map((lens) => {
+    const active = filters.activeLenses.has(lens.id);
+    return `<button type="button" class="kg-lens ${active ? "kg-lens-active" : ""}" data-lens="${lens.id}" aria-pressed="${active}" title="${escapeHtml(lens.desc)}">` +
+      `<span class="kg-lens-name">${escapeHtml(lens.name)}</span></button>`;
+  }).join("");
+  lensesEl.querySelectorAll(".kg-lens").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-lens");
+      if (filters.activeLenses.has(id)) filters.activeLenses.delete(id);
+      else filters.activeLenses.add(id);
+      applyFilters();
+    });
+  });
+
+  document.getElementById("kgImportanceVal").textContent = filters.importanceCut;
+}
+
+function lensNodeCount(lensId) {
+  let count = 0;
+  for (const node of DEMO_GRAPH.nodes) {
+    if (nodeMatchesLens(node, lensId, DEMO_GRAPH.links)) count += 1;
+  }
+  return count;
+}
+
+/* ---------- idle inspector ---------- */
+function renderInspectorIdle() {
+  if (selectedId) return;
+  const lensRows = LENSES.map((lens) => {
+    const active = filters.activeLenses.has(lens.id);
+    return `<div class="kg-insp-idle-row ${active ? "kg-insp-idle-row-active" : ""}" data-lens="${lens.id}">` +
+      `<span class="kg-insp-idle-copy"><span class="kg-insp-idle-label">${escapeHtml(lens.name)}</span>` +
+      `<span class="kg-insp-idle-desc">${escapeHtml(lens.desc)}</span></span>` +
+      `<span class="kg-insp-idle-action"><span class="kg-insp-idle-val">${lensNodeCount(lens.id)}</span>` +
+      `<span class="kg-insp-idle-chev" aria-hidden="true">&gt;</span></span></div>`;
+  }).join("");
+  inspectorEl.innerHTML =
+    `<div class="kg-insp-idle">` +
+    `<div class="kg-insp-idle-title">Today's operating picture</div>` +
+    `<p class="kg-insp-idle-prompt">Click any cluster to see the money story.</p>` +
+    lensRows +
+    `</div>`;
+  inspectorEl.classList.add("open");
+  inspectorEl.querySelectorAll(".kg-insp-idle-row").forEach((row) => {
+    row.addEventListener("click", () => {
+      const lens = row.getAttribute("data-lens");
+      if (lens) {
+        const wasActive = filters.activeLenses.has(lens);
+        filters.activeLenses.clear();
+        if (!wasActive) filters.activeLenses.add(lens);
+        applyFilters();
+      }
+    });
+  });
+}
+
 frameOverview(0);
-renderChrome();
-applyVisualState();
+applyFilters();
+renderInspectorIdle();
 boot.classList.add("hidden");
 animate();
 
@@ -792,9 +1290,15 @@ renderer.domElement.addEventListener("click", onCanvasClick);
 
 resetBtn.addEventListener("click", () => {
   clearSelection();
-  hiddenKinds.clear();
-  renderChrome();
-  applyVisualState();
+  filters.activeKinds = new Set(ALL_KINDS);
+  filters.activeLenses.clear();
+  filters.importanceCut = 0;
+  filters.showProvenance = true;
+  filters.showMoneyImpact = true;
+  document.getElementById("kgImportance").value = 0;
+  document.getElementById("kgProvenance").setAttribute("aria-pressed", "true");
+  document.getElementById("kgMoney").setAttribute("aria-pressed", "true");
+  applyFilters();
   frameOverview(900);
   pauseSpin();
 });
@@ -806,6 +1310,45 @@ rotateBtn.addEventListener("click", () => {
   autoRotate = !autoRotate;
   rotateLabel.textContent = autoRotate ? "Pause spin" : "Resume spin";
 });
+
+// rail controls
+document.getElementById("kgImportance").addEventListener("input", (e) => {
+  filters.importanceCut = Number(e.target.value);
+  applyFilters();
+});
+document.getElementById("kgProvenance").addEventListener("click", (e) => {
+  filters.showProvenance = !filters.showProvenance;
+  e.currentTarget.setAttribute("aria-pressed", String(filters.showProvenance));
+  applyFilters();
+});
+document.getElementById("kgMoney").addEventListener("click", (e) => {
+  filters.showMoneyImpact = !filters.showMoneyImpact;
+  e.currentTarget.setAttribute("aria-pressed", String(filters.showMoneyImpact));
+  applyFilters();
+});
+document.getElementById("kgRailReset").addEventListener("click", () => {
+  filters.activeKinds = new Set(ALL_KINDS);
+  filters.activeLenses.clear();
+  filters.importanceCut = 0;
+  filters.showProvenance = true;
+  filters.showMoneyImpact = true;
+  document.getElementById("kgImportance").value = 0;
+  document.getElementById("kgProvenance").setAttribute("aria-pressed", "true");
+  document.getElementById("kgMoney").setAttribute("aria-pressed", "true");
+  applyFilters();
+});
+document.getElementById("kgEmptyReset").addEventListener("click", () => {
+  filters.activeKinds = new Set(ALL_KINDS);
+  filters.activeLenses.clear();
+  filters.importanceCut = 0;
+  filters.showProvenance = true;
+  filters.showMoneyImpact = true;
+  document.getElementById("kgImportance").value = 0;
+  document.getElementById("kgProvenance").setAttribute("aria-pressed", "true");
+  document.getElementById("kgMoney").setAttribute("aria-pressed", "true");
+  applyFilters();
+});
+
 searchInput.addEventListener("input", renderSearch);
 searchInput.addEventListener("focus", renderSearch);
 searchInput.addEventListener("keydown", onSearchKeydown);
@@ -838,6 +1381,7 @@ window.__kg = {
     camera: camera.position.toArray(),
     target: controls.target.toArray(),
     exposure: renderer.toneMappingExposure,
+    lensShiftPx,
     bloomThreshold: bloom.luminanceMaterial?.threshold ?? 0.95,
     visibleLabels: labelGroup.children.filter((label) => label.visible).length,
     hoverId,
@@ -1176,6 +1720,12 @@ function updateLabels() {
       selectedLabel.visible = true;
     }
   }
+  for (const label of stageLabels.children) {
+    label.visible = true;
+    label.quaternion.copy(camera.quaternion);
+    const cameraDistance = camera.position.distanceTo(label.position);
+    label.scale.setScalar(clamp(cameraDistance / 520, 0.7, 1.15));
+  }
 }
 
 function estimateLabelRect(label, viewport) {
@@ -1231,6 +1781,128 @@ function createLaneGuides() {
   return group;
 }
 
+function createStageZones() {
+  const group = new THREE.Group();
+  // SelectiveBloom stays scoped to nodeMesh; these divider midpoints come from the irregular fixture stations by design.
+  group.userData.dimTarget = 0;
+  group.userData.showFloor = SHOW_FLOOR;
+  const slabGeometry = new THREE.PlaneGeometry(440, 345);
+  slabGeometry.rotateY(Math.PI / 2);
+  const slabMaterial = new THREE.MeshBasicMaterial({
+    color: 0x1a2b47,
+    transparent: true,
+    opacity: 0.18,
+    side: THREE.DoubleSide,
+    depthTest: true,
+    depthWrite: false,
+    fog: false,
+    toneMapped: true,
+    blending: THREE.NormalBlending,
+  });
+  const edgeMaterial = new THREE.LineBasicMaterial({
+    color: 0x33507a,
+    transparent: true,
+    opacity: 0.40,
+    depthTest: true,
+    depthWrite: false,
+    fog: false,
+    toneMapped: true,
+    blending: THREE.NormalBlending,
+  });
+  const accentMaterial = new THREE.LineBasicMaterial({
+    color: 0xf4b942,
+    transparent: true,
+    opacity: 0.25,
+    depthTest: true,
+    depthWrite: false,
+    fog: false,
+    toneMapped: true,
+    blending: THREE.NormalBlending,
+  });
+  group.userData.slabMaterial = slabMaterial;
+  group.userData.edgeMaterial = edgeMaterial;
+  group.userData.accentMaterial = accentMaterial;
+  for (const x of STAGE_DIVIDER_X) {
+    const slab = new THREE.Mesh(slabGeometry, slabMaterial);
+    slab.position.set(x, 12, -10);
+    slab.renderOrder = 0;
+    group.add(slab);
+
+    const edgeGeometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(x, -160.5, -230),
+      new THREE.Vector3(x, 184.5, -230),
+      new THREE.Vector3(x, -160.5, 210),
+      new THREE.Vector3(x, 184.5, 210),
+    ]);
+    const edge = new THREE.LineSegments(edgeGeometry, edgeMaterial);
+    edge.renderOrder = 0;
+    group.add(edge);
+
+    const accentGeometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(x, 184.5, -230),
+      new THREE.Vector3(x, 184.5, 210),
+    ]);
+    const accent = new THREE.Line(accentGeometry, accentMaterial);
+    accent.renderOrder = 1;
+    group.add(accent);
+  }
+  return group;
+}
+
+function createStageLabels() {
+  const group = new THREE.Group();
+  STAGE_DEFS.forEach((stage, index) => {
+    group.add(createStageText(`STAGE ${String(index + 1).padStart(2, "0")}`, {
+      x: stage.x,
+      y: 188,
+      z: -10,
+      color: 0xf4b942,
+      fontSize: 7,
+      font: STAGE_EYEBROW_FONT,
+      letterSpacing: 0.18,
+    }));
+    group.add(createStageText(stage.label, {
+      x: stage.x,
+      y: 205,
+      z: -10,
+      color: 0xf6f8fc,
+      fontSize: 15,
+      font: STAGE_NAME_FONT,
+      letterSpacing: 0,
+    }));
+  });
+  return group;
+}
+
+function createStageText(text, { x, y, z, color, fontSize, font, letterSpacing }) {
+  const label = new Text();
+  label.text = text;
+  label.font = font;
+  label.fontSize = fontSize;
+  label.letterSpacing = letterSpacing;
+  label.color = color;
+  label.anchorX = "center";
+  label.anchorY = "middle";
+  label.outlineWidth = 0.14;
+  label.outlineColor = 0x02050d;
+  label.outlineOpacity = 0.96;
+  label.depthOffset = -0.2;
+  label.material.depthTest = true;
+  label.material.depthWrite = false;
+  label.material.toneMapped = true;
+  label.position.set(x, y, z);
+  label.visible = true;
+  label.sync();
+  return label;
+}
+
+function updateStageZoneDimming(dimmed) {
+  stageZones.userData.dimTarget = dimmed ? 1 : 0;
+  stageZones.userData.slabMaterial.opacity = THREE.MathUtils.lerp(0.18, 0.12, stageZones.userData.dimTarget);
+  stageZones.userData.edgeMaterial.opacity = THREE.MathUtils.lerp(0.40, 0.26, stageZones.userData.dimTarget);
+  stageZones.userData.accentMaterial.opacity = THREE.MathUtils.lerp(0.25, 0.16, stageZones.userData.dimTarget);
+}
+
 function renderChrome() {
   const counts = Object.fromEntries(NODE_KIND_ORDER.map((kind) => [kind, 0]));
   for (const node of DEMO_GRAPH.nodes) counts[node.kind] += 1;
@@ -1240,18 +1912,10 @@ function renderChrome() {
     `<span class="kg-chip-val">${counts[kind]}</span><span class="kg-chip-label">${KIND_LABELS[kind]}s</span>` +
     `</span></span>`
   )).join("");
+  // legend is now rendered inside the rail by renderRail(); keep a passive read-only mirror here
   legendEl.innerHTML = NODE_KIND_ORDER.map((kind) => (
-    `<button type="button" class="kg-legend-item ${hiddenKinds.has(kind) ? "off" : ""}" data-kind="${kind}" style="--kind-color:${KIND_COLORS[kind]}"><span class="kg-legend-dot"></span>${KIND_LABELS[kind]}</button>`
+    `<span class="kg-legend-item ${hiddenKinds.has(kind) ? "off" : ""}" data-kind="${kind}" style="--kind-color:${KIND_COLORS[kind]}"><span class="kg-legend-dot"></span>${KIND_LABELS[kind]}</span>`
   )).join("");
-  legendEl.querySelectorAll(".kg-legend-item").forEach((item) => {
-    item.addEventListener("click", () => {
-      const kind = item.getAttribute("data-kind");
-      if (hiddenKinds.has(kind)) hiddenKinds.delete(kind);
-      else hiddenKinds.add(kind);
-      renderChrome();
-      applyVisualState();
-    });
-  });
 }
 
 function buildAdjacency() {
@@ -1308,6 +1972,7 @@ function selectNode(id, ms = 900) {
   hoverId = null;
   pauseSpin();
   closeSearch();
+  applyLensShift();
   const render = nodeRender.get(id);
   const distance = render ? clamp(render.radius * 14, 340, 470) : node.kind === "portco" ? 320 : 240;
   frameNode(id, ms, distance);
@@ -1322,6 +1987,8 @@ function clearSelection() {
   renderer.domElement.style.cursor = "default";
   currentFocusSet = null;
   currentPathLinks = [];
+  applyLensShift();
+  renderInspectorIdle();
   applyVisualState();
 }
 
@@ -1382,12 +2049,13 @@ function applyVisualState() {
   const active = focusInfo(focusId());
   currentFocusSet = active.set;
   currentPathLinks = active.pathLinks;
+  updateStageZoneDimming(Boolean(currentFocusSet));
   const activeEdgeIndexes = new Set(currentPathLinks.map((item) => item[3]));
 
   for (const node of DEMO_GRAPH.nodes) {
     const render = nodeRender.get(node.id);
     if (!render) continue;
-    const hidden = hiddenKinds.has(node.kind);
+    const hidden = hiddenKinds.has(node.kind) || (scopeSet && !scopeSet.has(node.id));
     const related = !currentFocusSet || currentFocusSet.has(node.id);
     const selected = node.id === selectedId || node.id === hoverId;
     const scale = hidden ? 0.001 : render.radius * (selected ? 1.1 : related ? 1 : 0.76);
@@ -1403,7 +2071,7 @@ function applyVisualState() {
 
   const colorAttr = edgeLines.geometry.attributes.color;
   linkPairs.forEach(([source, target, , index], pairIndex) => {
-    const hidden = hiddenKinds.has(source.kind) || hiddenKinds.has(target.kind);
+    const hidden = hiddenKinds.has(source.kind) || hiddenKinds.has(target.kind) || (scopeSet && (!scopeSet.has(source.id) || !scopeSet.has(target.id)));
     const pathActive = activeEdgeIndexes.has(index);
     const related = !currentFocusSet || (currentFocusSet.has(source.id) && currentFocusSet.has(target.id));
     const base = edgeLines.userData.baseColors[pairIndex].clone();
@@ -1566,18 +2234,11 @@ function renderFrame(now) {
   frameCount += 1;
 }
 
-function rotateCamera(delta) {
-  const angle = (Math.PI * 2 / 45) * delta;
-  const offset = camera.position.clone().sub(controls.target);
-  offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), angle);
-  camera.position.copy(controls.target).add(offset);
-}
-
 function frameOverview(ms) {
-  const distance = 650;
-  const yaw = 0.72;
-  const pitch = 0.38;
-  const target = new THREE.Vector3(graphCenter.x + 10, graphCenter.y + 6, graphCenter.z);
+  const distance = 1600;
+  const yaw = -0.45;
+  const pitch = 0.24;
+  const target = new THREE.Vector3(graphCenter.x, graphCenter.y, graphCenter.z);
   const next = new THREE.Vector3(
     target.x + Math.sin(yaw) * distance * Math.cos(pitch),
     target.y + Math.sin(pitch) * distance,
@@ -1624,11 +2285,25 @@ function flyCamera(position, target, ms = 0) {
   requestAnimationFrame(step);
 }
 
+function applyLensShift() {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const railWidth = railEl ? Math.ceil(railEl.getBoundingClientRect().width) : 0;
+  const wantedShift = selectedId || railWidth === 0 ? 0 : railWidth * LENS_SHIFT_RAIL_RATIO;
+  lensShiftPx = clamp(wantedShift, 0, Math.min(LENS_SHIFT_MAX_PX, width * 0.04));
+  camera.clearViewOffset();
+  if (lensShiftPx > 0) {
+    camera.setViewOffset(width, height, -lensShiftPx, 0, width, height);
+  } else {
+    camera.updateProjectionMatrix();
+  }
+}
+
 function onResize() {
   const width = window.innerWidth;
   const height = window.innerHeight;
   camera.aspect = width / height;
-  camera.updateProjectionMatrix();
+  applyLensShift();
   renderer.setSize(width, height);
   composer.setSize(width, height);
 }
