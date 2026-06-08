@@ -47,8 +47,8 @@
     inset: 0;
     z-index: 1;
     background:
-      radial-gradient(circle at 50% 45%, rgb(124 196 247 / 0.035), transparent 46%),
-      radial-gradient(circle at 36% 30%, rgb(244 185 66 / 0.05), transparent 34%),
+      radial-gradient(circle at 50% 45%, rgb(244 185 66 / 0.06), transparent 50%),
+      radial-gradient(circle at 36% 30%, rgb(244 185 66 / 0.045), transparent 34%),
       linear-gradient(180deg, #02050d, #04070f);
   }
 
@@ -96,7 +96,7 @@
     border: 1px solid rgb(255 255 255 / 0.1);
     border-radius: 14px;
     background:
-      linear-gradient(180deg, rgb(255 255 255 / 0.07), rgb(255 255 255 / 0.028)),
+      linear-gradient(180deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0.022)),
       rgb(4 7 15 / 0.78);
     box-shadow: 0 22px 70px rgb(0 0 0 / 0.46), inset 0 1px 0 rgb(255 255 255 / 0.07);
     backdrop-filter: blur(18px) saturate(135%);
@@ -183,9 +183,9 @@
   }
 
   .kg-search-input:focus {
-    border-color: rgb(94 234 212 / 0.5);
-    background: rgb(94 234 212 / 0.07);
-    box-shadow: 0 0 0 3px rgb(94 234 212 / 0.1);
+    border-color: rgb(244 185 66 / 0.5);
+    background: rgb(244 185 66 / 0.07);
+    box-shadow: 0 0 0 3px rgb(244 185 66 / 0.1);
   }
 
   .kg-search-input::placeholder {
@@ -245,7 +245,7 @@
 
   .kg-search-hit:hover,
   .kg-search-hit.kg-hit-active {
-    background: rgb(94 234 212 / 0.1);
+    background: rgb(244 185 66 / 0.1);
   }
 
   .kg-hit-swatch,
@@ -440,8 +440,8 @@
   }
 
   .kg-icon-button:hover {
-    border-color: rgb(94 234 212 / 0.45);
-    background: rgb(94 234 212 / 0.12);
+    border-color: rgb(244 185 66 / 0.45);
+    background: rgb(244 185 66 / 0.12);
     color: var(--color-foreground);
   }
 
@@ -578,8 +578,8 @@
   }
 
   .kg-conn:hover {
-    border-color: rgb(94 234 212 / 0.4);
-    background: rgb(94 234 212 / 0.08);
+    border-color: rgb(244 185 66 / 0.4);
+    background: rgb(244 185 66 / 0.08);
   }
 
   .kg-rail {
@@ -608,8 +608,8 @@
     transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
   }
   .kg-reset:hover {
-    border-color: rgb(94 234 212 / 0.42);
-    background: rgb(94 234 212 / 0.1);
+    border-color: rgb(244 185 66 / 0.42);
+    background: rgb(244 185 66 / 0.1);
     color: var(--color-foreground);
   }
   .kg-section { margin-bottom: 18px; }
@@ -729,7 +729,7 @@
     width: 14px; height: 14px; border-radius: 50%;
     background: #cfd4dc; transition: transform 160ms ease, background 160ms ease;
   }
-  .kg-overlay-toggle[aria-pressed="true"] .kg-overlay-switch { background: rgb(94 234 212 / 0.55); }
+  .kg-overlay-toggle[aria-pressed="true"] .kg-overlay-switch { background: rgb(244 185 66 / 0.55); }
   .kg-overlay-toggle[aria-pressed="true"] .kg-overlay-switch::after { transform: translateX(16px); background: #050810; }
   .kg-insp-idle { padding: 4px 2px; }
   .kg-insp-idle-title {
@@ -751,8 +751,8 @@
     transition: border-color 160ms ease, background 160ms ease;
   }
   .kg-insp-idle-row:hover {
-    border-color: rgb(94 234 212 / 0.4);
-    background: rgb(94 234 212 / 0.08);
+    border-color: rgb(244 185 66 / 0.4);
+    background: rgb(244 185 66 / 0.08);
   }
   .kg-insp-idle-row-active {
     border-color: rgb(244 185 66 / 0.48);
@@ -784,7 +784,7 @@
     transition: border-color 160ms ease, color 160ms ease, transform 160ms ease;
   }
   .kg-insp-idle-row:hover .kg-insp-idle-chev {
-    border-color: rgb(94 234 212 / 0.45);
+    border-color: rgb(244 185 66 / 0.45);
     color: var(--color-foreground);
     transform: translateX(2px);
   }
@@ -842,17 +842,17 @@
         Clear filters
       </button>
     </div>
-    <div class="kg-section">
-      <div class="kg-section-title">Entity types</div>
-      <div id="kgKindToggles"></div>
-    </div>
     <details class="kg-section kg-disclosure">
-      <summary class="kg-section-title">Lens filters</summary>
-      <div id="kgLenses" class="kg-lenses-compact kg-disclosure-body"></div>
-    </details>
-    <details class="kg-section kg-disclosure">
-      <summary class="kg-section-title">Advanced</summary>
+      <summary class="kg-section-title">Map controls</summary>
       <div class="kg-disclosure-body">
+        <div class="kg-advanced-block">
+          <div class="kg-section-title">Entity types</div>
+          <div id="kgKindToggles"></div>
+        </div>
+        <div class="kg-advanced-block">
+          <div class="kg-section-title">Lens filters</div>
+          <div id="kgLenses" class="kg-lenses-compact"></div>
+        </div>
         <div class="kg-advanced-block">
           <div class="kg-section-title">Declutter</div>
           <div class="kg-slider-row">
@@ -997,7 +997,7 @@ container.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x02050d);
-scene.fog = new THREE.FogExp2(0x02050d, 0.00075);
+scene.fog = new THREE.FogExp2(0x0a0905, 0.0009);
 
 const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 1800);
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -1010,32 +1010,41 @@ controls.minPolarAngle = 0.25;
 controls.maxPolarAngle = Math.PI * 0.62;
 controls.target.set(graphCenter.x, graphCenter.y, graphCenter.z);
 controls.autoRotate = false;
-controls.autoRotateSpeed = 1.35; // about 45s per revolution at 60fps, applied inside the damped update for a smooth spin
+controls.autoRotateSpeed = 0.32; // roughly three minutes per revolution, applied inside the damped update for a smooth spin
 applyLensShift();
 
-scene.add(new THREE.AmbientLight(0x8aa0c0, 0.18));
+scene.add(new THREE.AmbientLight(0xa89878, 0.18));
 const key = new THREE.DirectionalLight(0xfff1c8, 1.2);
 key.position.set(-260, 240, 320);
 scene.add(key);
-const rim = new THREE.DirectionalLight(0x7cc4f7, 0.55);
+const rim = new THREE.DirectionalLight(0xffe8b0, 0.55);
 rim.position.set(340, 120, -280);
 scene.add(rim);
 
-const nodeMesh = createInstancedNodes();
+let segmentClouds = null;
+let lastSegmentCloudTime = 0;
+
+const atmosphereGlow = createAtmosphereSprite();
+const { nodeMesh, nodeGlowGroup } = createInstancedNodes();
 const edgeLines = createEdges();
 const labelGroup = createLabels();
 const flowParticles = createFlowParticles();
 const selectionRing = createSelectionRing();
 const stageZones = createStageZones();
 const stageLabels = createStageLabels();
+scene.add(atmosphereGlow);
 scene.add(createLaneGuides());
 scene.add(stageZones);
 scene.add(stageLabels);
 scene.add(edgeLines);
+scene.add(nodeGlowGroup);
 scene.add(nodeMesh);
 scene.add(labelGroup);
 scene.add(flowParticles);
 scene.add(selectionRing);
+
+segmentClouds = createSegmentClouds();
+scene.add(segmentClouds);
 
 const composer = new EffectComposer(renderer, { frameBufferType: THREE.HalfFloatType });
 composer.addPass(new RenderPass(scene, camera));
@@ -1442,12 +1451,13 @@ vec3 kgViewDir = normalize(cameraPosition - vKgWorldPosition);
 float kgFacing = clamp(dot(kgNormal, kgViewDir), 0.0, 1.0);
 float kgCore = pow(kgFacing, 7.0);
 float kgRim = pow(1.0 - kgFacing, 3.1);
-vec3 kgCoreTint = vec3(1.0, 0.97, 0.9) * max(max(diffuseColor.r, diffuseColor.g), diffuseColor.b);
-diffuseColor.rgb = mix(diffuseColor.rgb, kgCoreTint, kgCore * 0.24);
-diffuseColor.rgb *= 1.0 - kgRim * 0.14;`,
+float kgHotCore = max(max(max(diffuseColor.r, diffuseColor.g), diffuseColor.b), 0.78);
+vec3 kgCoreTint = vec3(1.0, 0.95, 0.85) * kgHotCore;
+diffuseColor.rgb = mix(diffuseColor.rgb, kgCoreTint, kgCore * 0.46);
+diffuseColor.rgb *= 1.0 - kgRim * 0.06;`,
       );
   };
-  material.customProgramCacheKey = () => "kg-node-fresnel-v1";
+  material.customProgramCacheKey = () => "kg-node-fresnel-v2";
 
   const mesh = new THREE.InstancedMesh(geometry, material, DEMO_GRAPH.nodes.length);
   mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -1455,10 +1465,29 @@ diffuseColor.rgb *= 1.0 - kgRim * 0.14;`,
   mesh.receiveShadow = false;
   mesh.frustumCulled = false;
   mesh.renderOrder = 2;
+  const glowTexture = createNodeGlowTexture();
+  const glowGroup = new THREE.Group();
+  glowGroup.renderOrder = 1;
   const dummy = new THREE.Object3D();
   DEMO_GRAPH.nodes.forEach((node, index) => {
     const radius = node.radius * (node.kind === "portco" ? 1.18 : 1.0) * magnitudeScale(node);
     const color = new THREE.Color(KIND_COLORS[node.kind]).multiplyScalar(emissiveIntensity(node));
+    const glowMaterial = new THREE.SpriteMaterial({
+      color: new THREE.Color(KIND_COLORS[node.kind]),
+      map: glowTexture,
+      transparent: true,
+      opacity: 0.42,
+      depthTest: false,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      toneMapped: false,
+    });
+    const glow = new THREE.Sprite(glowMaterial);
+    glow.position.set(node.x, node.y, node.z);
+    glow.scale.setScalar(radius * 4.2);
+    glow.frustumCulled = false;
+    glow.renderOrder = 1;
+    glowGroup.add(glow);
     dummy.position.set(node.x, node.y, node.z);
     dummy.scale.setScalar(radius);
     dummy.updateMatrix();
@@ -1468,22 +1497,146 @@ diffuseColor.rgb *= 1.0 - kgRim * 0.14;`,
       index,
       radius,
       color,
+      glowSize: radius * (node.kind === "portco" ? 3.0 : node.hub ? 3.45 : 3.8),
+      glowPhase: index * 1.61803398875,
+      glow,
       position: new THREE.Vector3(node.x, node.y, node.z),
     });
   });
   mesh.instanceMatrix.needsUpdate = true;
   mesh.instanceColor.needsUpdate = true;
-  return mesh;
+  return { nodeMesh: mesh, nodeGlowGroup: glowGroup };
+}
+
+function createRadialTexture(stops, size = 256) {
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  const center = size / 2;
+  const gradient = ctx.createRadialGradient(center, center, 0, center, center, center);
+  for (const [offset, color] of stops) gradient.addColorStop(offset, color);
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function createNodeGlowTexture() {
+  return createRadialTexture([
+    [0, "rgba(255, 255, 255, 0.94)"],
+    [0.18, "rgba(255, 248, 226, 0.58)"],
+    [0.58, "rgba(255, 255, 255, 0.16)"],
+    [1, "rgba(255, 255, 255, 0)"],
+  ]);
+}
+
+function createAtmosphereSprite() {
+  const material = new THREE.SpriteMaterial({
+    map: createRadialTexture([
+      [0, "rgba(244, 185, 66, 0.11)"],
+      [0.45, "rgba(244, 185, 66, 0.045)"],
+      [1, "rgba(244, 185, 66, 0)"],
+    ], 512),
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    depthTest: false,
+    transparent: true,
+    toneMapped: false,
+  });
+  const sprite = new THREE.Sprite(material);
+  sprite.position.set(graphCenter.x, graphCenter.y - 8, graphCenter.z - 24);
+  sprite.scale.set(1700, 1280, 1);
+  sprite.frustumCulled = false;
+  sprite.renderOrder = -1;
+  sprite.userData.baseY = sprite.position.y;
+  return sprite;
+}
+
+function createSegmentClouds() {
+  const group = new THREE.Group();
+  group.name = "segmentClouds";
+
+  const CLOUD_SPECS = [
+    { kind: "agent",        pos: [-332, -12, -161], scale: 400, lerp: 0.72 },
+    { kind: "portco",       pos: [-147,  23,  -22], scale: 560, lerp: 0.00 },
+    { kind: "bottleneck",   pos: [  41, -46,   61], scale: 320, lerp: 0.45 },
+    { kind: "intervention", pos: [ 205, -25,  -90], scale: 420, lerp: 0.78 },
+    { kind: "playbook",     pos: [ 366,   9,  102], scale: 520, lerp: 0.62 },
+  ];
+
+  const HOVER_ALPHA = 0.055;
+  const REST_ALPHA = 0.012;
+
+  for (const spec of CLOUD_SPECS) {
+    const tint = new THREE.Color(KIND_COLORS[spec.kind])
+      .lerp(new THREE.Color(0xf4b942), spec.lerp);
+    const r = Math.round(tint.r * 255);
+    const g = Math.round(tint.g * 255);
+    const b = Math.round(tint.b * 255);
+
+    const material = new THREE.SpriteMaterial({
+      map: createRadialTexture([
+        [0,    `rgba(${r},${g},${b}, ${HOVER_ALPHA})`],
+        [0.42, `rgba(${r},${g},${b}, ${HOVER_ALPHA * 0.4})`],
+        [1,    `rgba(${r},${g},${b}, 0)`],
+      ], 512),
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      depthTest: false,
+      transparent: true,
+      toneMapped: false,
+      opacity: REST_ALPHA / HOVER_ALPHA,
+    });
+
+    const sprite = new THREE.Sprite(material);
+    sprite.position.set(...spec.pos);
+    sprite.scale.set(spec.scale, spec.scale, 1);
+    sprite.frustumCulled = false;
+    sprite.renderOrder = -1;
+    sprite.userData.kind = spec.kind;
+    sprite.userData.restOpacity = REST_ALPHA / HOVER_ALPHA;
+    sprite.userData.hoverOpacity = 1.0;
+    group.add(sprite);
+  }
+
+  return group;
+}
+
+function updateSegmentClouds(now) {
+  if (!segmentClouds) return;
+  const delta = lastSegmentCloudTime ? Math.min(0.05, (now - lastSegmentCloudTime) / 1000) : 0;
+  lastSegmentCloudTime = now;
+
+  const focusedId = focusId();
+  let focusedKind = null;
+  if (focusedId) {
+    const node = byId.get(focusedId);
+    if (node) focusedKind = node.kind;
+  }
+
+  const lerpSpeed = 1 - Math.exp(-delta * 12);
+  const viewDistance = camera.position.distanceTo(graphCenter);
+  const detailFade = THREE.MathUtils.lerp(0.14, 1.0, clamp((viewDistance - 420) / 900, 0, 1));
+
+  for (const cloud of segmentClouds.children) {
+    const target = ((cloud.userData.kind === focusedKind) ? cloud.userData.hoverOpacity : cloud.userData.restOpacity) * detailFade;
+    cloud.material.opacity += (target - cloud.material.opacity) * lerpSpeed;
+  }
 }
 
 function createEdges() {
   const positions = [];
   const colors = [];
   const baseColors = [];
+  const kindColors = [];
   const edgeRanges = [];
   const segments = 19;
   for (const [source, target, , index] of linkPairs) {
-    const color = new THREE.Color(KIND_COLORS[source.kind]).lerp(new THREE.Color(KIND_COLORS[target.kind]), 0.35);
+    const kindColor = new THREE.Color(KIND_COLORS[source.kind]).lerp(new THREE.Color(KIND_COLORS[target.kind]), 0.35);
+    const color = kindColor.clone().lerp(new THREE.Color(0xf4b942), 0.55);
     const start = positions.length / 3;
     for (let i = 0; i < segments; i += 1) {
       const a = pointOnEdgeCurve(source, target, index, i / segments);
@@ -1493,6 +1646,7 @@ function createEdges() {
     }
     edgeRanges.push({ start, count: segments * 2 });
     baseColors.push(color.clone());
+    kindColors.push(kindColor.clone());
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
@@ -1500,7 +1654,7 @@ function createEdges() {
   const material = new THREE.LineBasicMaterial({
     vertexColors: true,
     transparent: true,
-    opacity: 0.18,
+    opacity: 0.22,
     depthTest: true,
     depthWrite: false,
     toneMapped: true,
@@ -1508,6 +1662,7 @@ function createEdges() {
   const lines = new THREE.LineSegments(geometry, material);
   lines.renderOrder = 1;
   lines.userData.baseColors = baseColors;
+  lines.userData.kindColors = kindColors;
   lines.userData.edgeRanges = edgeRanges;
   return lines;
 }
@@ -1756,7 +1911,7 @@ function chromeRects(viewport) {
 function createLaneGuides() {
   const group = new THREE.Group();
   const material = new THREE.LineBasicMaterial({
-    color: 0x3d506c,
+    color: 0x4a3a1c,
     transparent: true,
     opacity: 0.18,
     depthTest: true,
@@ -1783,9 +1938,9 @@ function createStageZones() {
   const slabGeometry = new THREE.PlaneGeometry(440, 345);
   slabGeometry.rotateY(Math.PI / 2);
   const slabMaterial = new THREE.MeshBasicMaterial({
-    color: 0x1a2b47,
+    color: 0x171008,
     transparent: true,
-    opacity: 0.18,
+    opacity: 0.08,
     side: THREE.DoubleSide,
     depthTest: true,
     depthWrite: false,
@@ -1794,9 +1949,9 @@ function createStageZones() {
     blending: THREE.NormalBlending,
   });
   const edgeMaterial = new THREE.LineBasicMaterial({
-    color: 0x33507a,
+    color: 0xf4b942,
     transparent: true,
-    opacity: 0.40,
+    opacity: 0.09,
     depthTest: true,
     depthWrite: false,
     fog: false,
@@ -1806,7 +1961,7 @@ function createStageZones() {
   const accentMaterial = new THREE.LineBasicMaterial({
     color: 0xf4b942,
     transparent: true,
-    opacity: 0.25,
+    opacity: 0.28,
     depthTest: true,
     depthWrite: false,
     fog: false,
@@ -1859,7 +2014,7 @@ function createStageLabels() {
       x: stage.x,
       y: 205,
       z: -10,
-      color: 0xf6f8fc,
+      color: 0xf6efe0,
       fontSize: 15,
       font: STAGE_NAME_FONT,
       letterSpacing: 0,
@@ -1892,9 +2047,9 @@ function createStageText(text, { x, y, z, color, fontSize, font, letterSpacing }
 
 function updateStageZoneDimming(dimmed) {
   stageZones.userData.dimTarget = dimmed ? 1 : 0;
-  stageZones.userData.slabMaterial.opacity = THREE.MathUtils.lerp(0.18, 0.12, stageZones.userData.dimTarget);
-  stageZones.userData.edgeMaterial.opacity = THREE.MathUtils.lerp(0.40, 0.26, stageZones.userData.dimTarget);
-  stageZones.userData.accentMaterial.opacity = THREE.MathUtils.lerp(0.25, 0.16, stageZones.userData.dimTarget);
+  stageZones.userData.slabMaterial.opacity = THREE.MathUtils.lerp(0.08, 0.045, stageZones.userData.dimTarget);
+  stageZones.userData.edgeMaterial.opacity = THREE.MathUtils.lerp(0.09, 0.05, stageZones.userData.dimTarget);
+  stageZones.userData.accentMaterial.opacity = THREE.MathUtils.lerp(0.28, 0.17, stageZones.userData.dimTarget);
 }
 
 function renderChrome() {
@@ -2068,7 +2223,7 @@ function applyVisualState() {
     const hidden = hiddenKinds.has(source.kind) || hiddenKinds.has(target.kind) || (scopeSet && (!scopeSet.has(source.id) || !scopeSet.has(target.id)));
     const pathActive = activeEdgeIndexes.has(index);
     const related = !currentFocusSet || (currentFocusSet.has(source.id) && currentFocusSet.has(target.id));
-    const base = edgeLines.userData.baseColors[pairIndex].clone();
+    const base = (pathActive ? edgeLines.userData.kindColors[pairIndex] : edgeLines.userData.baseColors[pairIndex]).clone();
     const distanceFade = screenLengthFade(source, target);
     const multiplier = hidden ? 0 : !currentFocusSet ? 0.72 * distanceFade : pathActive ? 2.2 : related ? 1.15 * distanceFade : 0.05;
     base.multiplyScalar(multiplier);
@@ -2221,11 +2376,42 @@ function renderFrame(now) {
   // inside the single damped update() instead of fighting a manual camera move (the jitter cause).
   controls.autoRotate = autoRotate && now > pausedUntil;
   controls.update();
+  updateAtmosphereGlow(now);
+  updateNodeGlow(now);
   updateLabels();
   updateFlowParticles(now);
   updateSelectionRing();
+  updateSegmentClouds(now);
   composer.render(delta);
   frameCount += 1;
+}
+
+function updateAtmosphereGlow(now) {
+  atmosphereGlow.position.y = atmosphereGlow.userData.baseY + Math.sin(now * 0.00008) * 6;
+  const viewDistance = camera.position.distanceTo(graphCenter);
+  atmosphereGlow.material.opacity = THREE.MathUtils.lerp(0.08, 1.0, clamp((viewDistance - 420) / 900, 0, 1));
+}
+
+function updateNodeGlow(now) {
+  const minDistance = controls.minDistance;
+  const distanceRange = Math.max(1, controls.maxDistance - controls.minDistance);
+  for (const node of DEMO_GRAPH.nodes) {
+    const render = nodeRender.get(node.id);
+    if (!render) continue;
+    const hidden = hiddenKinds.has(node.kind) || (scopeSet && !scopeSet.has(node.id));
+    const related = !currentFocusSet || currentFocusSet.has(node.id);
+    const selected = node.id === selectedId || node.id === hoverId;
+    const cameraDistance = camera.position.distanceTo(render.position);
+    const depthT = clamp((cameraDistance - minDistance) / distanceRange, 0, 1);
+    const breathe = 1 + Math.sin(now * 0.0013 + render.glowPhase) * 0.055;
+    const haloScale = hidden ? 0.001 : render.glowSize * (1 + depthT * 1.55) * breathe * (selected ? 1.1 : related ? 1 : 0.84);
+    const alpha = hidden ? 0 : (0.58 - depthT * 0.18 + (selected ? 0.10 : 0)) * (related ? 1 : 0.10);
+    render.glow.visible = !hidden && alpha > 0.01;
+    render.glow.position.copy(render.position);
+    render.glow.scale.set(haloScale, haloScale, 1);
+    render.glow.material.color.set(KIND_COLORS[node.kind]);
+    render.glow.material.opacity = clamp(alpha, 0, 1);
+  }
 }
 
 function frameOverview(ms) {
