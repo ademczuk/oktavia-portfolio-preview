@@ -2283,13 +2283,15 @@ function applyLensShift() {
   const width = window.innerWidth;
   const height = window.innerHeight;
   const railWidth = railEl ? Math.ceil(railEl.getBoundingClientRect().width) : 0;
-  // Smaller screens need a larger shift because the rail occludes a larger fraction of
-  // the frame. Scale the shift up as width drops below 1500px; at >=1500px (the target
-  // projector) the factor is 0 so the verified wide framing is unchanged.
-  const smallFactor = clamp((1500 - width) / 700, 0, 1);
+  // The left rail only occludes the first stage below ~1200px; at wider sizes the base
+  // shift clears it and the inspector (not the rail) is the tight side. So ramp the extra
+  // shift in ONLY below 1200px, leaving the verified wide framing (and 1280/1366, where
+  // the left already clears) at the base shift so it does not push the right stages under
+  // the inspector.
+  const smallFactor = clamp((1200 - width) / 250, 0, 1);
   const wantedShift = selectedId || railWidth === 0
     ? 0
-    : railWidth * (LENS_SHIFT_RAIL_RATIO + smallFactor * 0.45);
+    : railWidth * (LENS_SHIFT_RAIL_RATIO + smallFactor * 0.65);
   lensShiftPx = clamp(wantedShift, 0, Math.min(LENS_SHIFT_MAX_PX, width * 0.22));
   camera.clearViewOffset();
   if (lensShiftPx > 0) {
