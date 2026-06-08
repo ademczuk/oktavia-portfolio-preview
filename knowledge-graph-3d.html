@@ -719,6 +719,8 @@ controls.maxDistance = 980;
 controls.minPolarAngle = 0.25;
 controls.maxPolarAngle = Math.PI * 0.62;
 controls.target.set(graphCenter.x, graphCenter.y, graphCenter.z);
+controls.autoRotate = false;
+controls.autoRotateSpeed = 1.35; // about 45s per revolution at 60fps, applied inside the damped update for a smooth spin
 
 scene.add(new THREE.AmbientLight(0x8aa0c0, 0.18));
 const key = new THREE.DirectionalLight(0xfff1c8, 1.2);
@@ -1512,13 +1514,13 @@ function animate() {
 function renderFrame(now) {
   const delta = Math.min(0.05, Math.max(0.001, (now - lastFrameTime) / 1000));
   lastFrameTime = now;
+  // Drive the ambient spin through OrbitControls' native autoRotate so it is applied
+  // inside the single damped update() instead of fighting a manual camera move (the jitter cause).
+  controls.autoRotate = autoRotate && now > pausedUntil;
   controls.update();
   updateLabels();
   updateFlowParticles(now);
   updateSelectionRing();
-  if (autoRotate && now > pausedUntil) {
-    rotateCamera(delta);
-  }
   composer.render(delta);
   frameCount += 1;
 }
