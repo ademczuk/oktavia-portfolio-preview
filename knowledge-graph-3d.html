@@ -2079,24 +2079,25 @@ function createStageText(text, { x, y, z, color, opacity = 1, fontSize, font, le
 
 function updateStageZoneDimming(dimmed) {
   stageZones.userData.dimTarget = dimmed ? 1 : 0;
-  for (const material of stageZones.userData.slabMaterials) {
-    material.userData.baseOpacity = THREE.MathUtils.lerp(0.06, 0.034, stageZones.userData.dimTarget);
-  }
-  for (const material of stageZones.userData.edgeMaterials) {
-    material.userData.baseOpacity = THREE.MathUtils.lerp(0.09, 0.05, stageZones.userData.dimTarget);
-  }
-  for (const material of stageZones.userData.accentMaterials) {
-    material.userData.baseOpacity = THREE.MathUtils.lerp(0.28, 0.17, stageZones.userData.dimTarget);
-  }
   updateStageZoneFade();
 }
 
+// Self-contained: recompute the focus-dimmed base from dimTarget every frame, then
+// scale by the live camera-distance fade. Earlier this read material.userData.baseOpacity,
+// which was never persisted, so the slabs stayed at the washing value on a plain click-frame
+// (distance ~267) instead of fading out. Constants here are the source of truth.
 function updateStageZoneFade() {
   const viewDistance = camera.position.distanceTo(graphCenter);
   const fade = clamp((viewDistance - 300) / 600, 0, 1);
+  const dim = stageZones.userData.dimTarget || 0;
+  const base = {
+    slabMaterials: THREE.MathUtils.lerp(0.06, 0.034, dim),
+    edgeMaterials: THREE.MathUtils.lerp(0.09, 0.05, dim),
+    accentMaterials: THREE.MathUtils.lerp(0.28, 0.17, dim),
+  };
   for (const key of ["slabMaterials", "edgeMaterials", "accentMaterials"]) {
     for (const material of stageZones.userData[key]) {
-      material.opacity = (material.userData.baseOpacity ?? material.opacity) * fade;
+      material.opacity = base[key] * fade;
     }
   }
 }
