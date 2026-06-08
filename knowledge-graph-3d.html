@@ -1973,7 +1973,7 @@ function createStageZones() {
     const edgeMaterial = new THREE.LineBasicMaterial({
       color: tint,
       transparent: true,
-      opacity: 0.16,
+      opacity: 0.11,
       depthTest: true,
       depthWrite: false,
       fog: true,
@@ -1983,7 +1983,7 @@ function createStageZones() {
     const accentMaterial = new THREE.LineBasicMaterial({
       color: 0xf4b942,
       transparent: true,
-      opacity: 0.22,
+      opacity: 0.16,
       depthTest: true,
       depthWrite: false,
       fog: true,
@@ -2082,8 +2082,8 @@ function updateStageZoneFade() {
   const fade = clamp((viewDistance - 300) / 600, 0, 1);
   const dim = stageZones.userData.dimTarget || 0;
   const base = {
-    edgeMaterials: THREE.MathUtils.lerp(0.16, 0.09, dim),
-    accentMaterials: THREE.MathUtils.lerp(0.22, 0.14, dim),
+    edgeMaterials: THREE.MathUtils.lerp(0.11, 0.07, dim),
+    accentMaterials: THREE.MathUtils.lerp(0.16, 0.10, dim),
   };
   for (const key of ["edgeMaterials", "accentMaterials"]) {
     for (const material of stageZones.userData[key]) {
@@ -2463,7 +2463,7 @@ function updateNodeGlow(now) {
 }
 
 function frameOverview(ms) {
-  const distance = 1600;
+  const distance = 1200;
   const yaw = -0.45;
   const pitch = 0.24;
   const target = new THREE.Vector3(graphCenter.x, graphCenter.y, graphCenter.z);
