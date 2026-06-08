@@ -1010,7 +1010,7 @@ controls.minPolarAngle = 0.25;
 controls.maxPolarAngle = Math.PI * 0.62;
 controls.target.set(graphCenter.x, graphCenter.y, graphCenter.z);
 controls.autoRotate = false;
-controls.autoRotateSpeed = 0.32; // roughly three minutes per revolution, applied inside the damped update for a smooth spin
+controls.autoRotateSpeed = 0.75; // calm but visibly moving overview spin
 applyLensShift();
 
 scene.add(new THREE.AmbientLight(0xa89878, 0.18));
@@ -1290,6 +1290,10 @@ controls.addEventListener("change", () => {
 });
 controls.addEventListener("end", () => {
   pausedUntil = performance.now() + 2200;
+});
+let pointerDownAt = null;
+renderer.domElement.addEventListener("pointerdown", (e) => {
+  pointerDownAt = { x: e.clientX, y: e.clientY };
 });
 renderer.domElement.addEventListener("pointermove", onPointerMove);
 renderer.domElement.addEventListener("pointerleave", () => setHover(null));
@@ -2076,13 +2080,24 @@ function createStageText(text, { x, y, z, color, opacity = 1, fontSize, font, le
 function updateStageZoneDimming(dimmed) {
   stageZones.userData.dimTarget = dimmed ? 1 : 0;
   for (const material of stageZones.userData.slabMaterials) {
-    material.opacity = THREE.MathUtils.lerp(0.06, 0.034, stageZones.userData.dimTarget);
+    material.userData.baseOpacity = THREE.MathUtils.lerp(0.06, 0.034, stageZones.userData.dimTarget);
   }
   for (const material of stageZones.userData.edgeMaterials) {
-    material.opacity = THREE.MathUtils.lerp(0.09, 0.05, stageZones.userData.dimTarget);
+    material.userData.baseOpacity = THREE.MathUtils.lerp(0.09, 0.05, stageZones.userData.dimTarget);
   }
   for (const material of stageZones.userData.accentMaterials) {
-    material.opacity = THREE.MathUtils.lerp(0.28, 0.17, stageZones.userData.dimTarget);
+    material.userData.baseOpacity = THREE.MathUtils.lerp(0.28, 0.17, stageZones.userData.dimTarget);
+  }
+  updateStageZoneFade();
+}
+
+function updateStageZoneFade() {
+  const viewDistance = camera.position.distanceTo(graphCenter);
+  const fade = clamp((viewDistance - 300) / 600, 0, 1);
+  for (const key of ["slabMaterials", "edgeMaterials", "accentMaterials"]) {
+    for (const material of stageZones.userData[key]) {
+      material.opacity = (material.userData.baseOpacity ?? material.opacity) * fade;
+    }
   }
 }
 
@@ -2125,6 +2140,11 @@ function onPointerMove(event) {
 }
 
 function onCanvasClick(event) {
+  if (pointerDownAt) {
+    const moved = Math.hypot(event.clientX - pointerDownAt.x, event.clientY - pointerDownAt.y);
+    pointerDownAt = null;
+    if (moved > 6) return;
+  }
   const hit = hitNode(event);
   if (hit) selectNode(hit.id, 900);
   else clearSelection();
@@ -2164,6 +2184,7 @@ function selectNode(id, ms = 900) {
 }
 
 function clearSelection() {
+  const had = selectedId;
   selectedId = null;
   hoverId = null;
   inspectorEl.classList.remove("open");
@@ -2173,6 +2194,7 @@ function clearSelection() {
   applyLensShift();
   renderInspectorIdle();
   applyVisualState();
+  if (had) frameOverview(700);
 }
 
 function focusId() {
@@ -2408,7 +2430,7 @@ function renderFrame(now) {
   lastFrameTime = now;
   // Drive the ambient spin through OrbitControls' native autoRotate so it is applied
   // inside the single damped update() instead of fighting a manual camera move (the jitter cause).
-  controls.autoRotate = autoRotate && now > pausedUntil;
+  controls.autoRotate = autoRotate && !selectedId && now > pausedUntil;
   controls.update();
   updateAtmosphereGlow(now);
   updateNodeGlow(now);
@@ -2416,6 +2438,7 @@ function renderFrame(now) {
   updateFlowParticles(now);
   updateSelectionRing();
   updateSegmentClouds(now);
+  updateStageZoneFade();
   composer.render(delta);
   frameCount += 1;
 }
