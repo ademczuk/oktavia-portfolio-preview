@@ -12,6 +12,24 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="style.css" />
 
+<!-- Fallback: the interactive map is an ES module whose top-level imports pull
+     three.js and helpers from a CDN. A module top-level import failure cannot be
+     caught from inside that module, so this classic (non-module) script is the
+     catch-all. If the map has not booted within 8s (CDN blocked, slow network,
+     WebGL unavailable), swap the stuck "Building" overlay for a readable message
+     instead of a permanent blank canvas. A successful boot sets __kgBooted true. -->
+<script>
+  window.__kgBooted = false;
+  setTimeout(function () {
+    if (window.__kgBooted) return;
+    var b = document.getElementById("kgBoot");
+    if (!b) return;
+    b.style.cursor = "default";
+    b.innerHTML = "The 3D operating map could not load on this network. " +
+      "Refresh on a stable connection, or continue with the deck and dashboard.";
+  }, 8000);
+</script>
+
 <style>
   :root {
     --color-background: #04070f;
@@ -1288,6 +1306,7 @@ frameOverview(0);
 applyFilters();
 renderInspectorIdle();
 boot.classList.add("hidden");
+window.__kgBooted = true;
 animate();
 
 controls.addEventListener("start", pauseSpin);

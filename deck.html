@@ -7,15 +7,39 @@
 <meta name="description" content="The capabilities of Oktavia Portfolio, an AI operating partner for private equity, framed for an operator and owner. A workforce of named AI employees that compounds value creation across every PortCo." />
 
 <!-- Fonts: Instrument Serif display + IBM Plex Sans body + IBM Plex Mono labels (same as the landing) -->
+<link rel="icon" href="data:," />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
 
-<!-- Reveal.js core + base structure (theme is overridden below with the shared tokens) -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reveal.min.css" />
+<!-- Reveal.js core + base structure, self-hosted so the deck never depends on
+     an external CDN that a restricted or slow network can block (the cause of
+     the blank-deck failure: reveal hides every slide until its JS marks one
+     present, so a missing reveal.min.js leaves the content permanently hidden). -->
+<link rel="stylesheet" href="vendor/reveal.min.css" />
 
 <!-- Shared design system (tokens, cards, chips, buttons) -->
 <link rel="stylesheet" href="style.css" />
+
+<!-- Fallback: if reveal.js is unavailable or its init throws, force every slide
+     visible and stacked as a readable scrollable document. Zero JS dependency. -->
+<style>
+  html.deck-fallback, html.deck-fallback body { height: auto; overflow: auto; }
+  html.deck-fallback .reveal { position: static; height: auto; overflow: visible; }
+  html.deck-fallback .reveal .slides {
+    position: static !important; left: auto !important; top: auto !important;
+    width: auto !important; height: auto !important; transform: none !important;
+    text-align: left; padding: 4vh 6vw 8vh;
+  }
+  html.deck-fallback .reveal .slides section {
+    visibility: visible !important; display: block !important; opacity: 1 !important;
+    position: static !important; height: auto !important; transform: none !important;
+    max-width: 980px; margin: 0 auto 8vh; padding-bottom: 5vh;
+    border-bottom: 1px solid var(--line, rgba(255,255,255,0.12));
+  }
+  html.deck-fallback .reveal .controls,
+  html.deck-fallback .reveal .progress { display: none !important; }
+</style>
 
 <style>
   /* ============================================================
@@ -1111,6 +1135,7 @@
 
     function renderAgents(list, mountId) {
       const grid = document.getElementById(mountId);
+      if (!grid) return;
       list.forEach((a) => {
         const el = document.createElement("div");
         el.className = "mini";
@@ -1144,23 +1169,40 @@
   </script>
 
   <!-- ============ REVEAL INIT ============ -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/5.1.0/reveal.min.js"></script>
+  <script src="vendor/reveal.min.js"></script>
   <script>
-    Reveal.initialize({
-      width: 1280,
-      height: 760,
-      margin: 0.06,
-      minScale: 0.2,
-      maxScale: 1.6,
-      controls: true,
-      progress: true,
-      slideNumber: "c/t",
-      hash: true,
-      transition: "slide",
-      transitionSpeed: "slow",
-      backgroundTransition: "fade",
-      controlsTutorial: false,
-    });
+    // Force every slide readable if reveal.js is missing or its init throws,
+    // so the deck is never a blank page in front of the audience.
+    function deckFallback() { document.documentElement.classList.add("deck-fallback"); }
+    try {
+      if (typeof Reveal === "undefined") {
+        deckFallback();
+      } else {
+        Reveal.initialize({
+          width: 1280,
+          height: 760,
+          margin: 0.06,
+          minScale: 0.2,
+          maxScale: 1.6,
+          controls: true,
+          progress: true,
+          slideNumber: "c/t",
+          hash: true,
+          transition: "slide",
+          transitionSpeed: "slow",
+          backgroundTransition: "fade",
+          controlsTutorial: false,
+        });
+      }
+    } catch (err) {
+      deckFallback();
+    }
+    // Safety net: if reveal never reaches "ready" (slow load, blocked script,
+    // silent init failure), reveal the content as a scrollable document.
+    setTimeout(function () {
+      var r = document.querySelector(".reveal");
+      if (!r || !r.classList.contains("ready")) deckFallback();
+    }, 2500);
   </script>
 
   <!-- ============ LIVING CONSTELLATION (vanilla canvas, ported 1:1 from the live app) ============ -->
